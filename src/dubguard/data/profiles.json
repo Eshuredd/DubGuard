@@ -1,0 +1,54 @@
+{
+  "power": {
+    "script": {"id":"power","revision":"1","instructions":[{"id":"power","text":"Switch the power off.","approved_variants":[{"text":"Turn the power off.","approved_by":"synthetic-reviewer","reason":"Explicit approved imperative variant."}]}]},
+    "policy": {"id":"power-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"power-state","kind":"polarity","instruction_id":"power","approved_phrase":"off","reversed_phrase":"on"}]}
+  },
+  "valve": {
+    "script": {"id":"valve","revision":"1","instructions":[{"id":"valve","text":"Keep the valve closed.","approved_variants":[{"text":"Leave the valve closed.","approved_by":"synthetic-reviewer","reason":"Explicit approved closed-state instruction."}]}]},
+    "policy": {"id":"valve-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"valve-state","kind":"polarity","instruction_id":"valve","approved_phrase":"closed","reversed_phrase":"open"}]}
+  },
+  "negation": {
+    "script": {"id":"interlock","revision":"1","instructions":[{"id":"interlock","text":"Do not bypass the interlock.","approved_variants":[{"text":"Never bypass the interlock.","approved_by":"synthetic-reviewer","reason":"Explicit approved prohibition."}]}]},
+    "policy": {"id":"interlock-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"interlock-negation","kind":"polarity","instruction_id":"interlock","approved_phrase":"do not","reversed_phrase":"do"}]}
+  },
+  "warning": {
+    "script": {"id":"warning","revision":"1","instructions":[{"id":"warning","text":"Warning: isolate the supply before maintenance.","approved_variants":[{"text":"Before maintenance, isolate the supply.","approved_by":"synthetic-reviewer","reason":"Explicit approved warning phrasing."}]}]},
+    "policy": {"id":"warning-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"isolation-warning","kind":"warning","instruction_id":"warning","forbidden_wordings":["Warning: leave the supply energized during maintenance."]}]}
+  },
+  "time": {
+    "script": {"id":"time","revision":"1","instructions":[{"id":"wait","text":"Wait at least 60 seconds.","approved_variants":[{"text":"Allow at least 1 minute.","approved_by":"synthetic-reviewer","reason":"Explicit approved duration and imperative variant."}]}]},
+    "policy": {"id":"time-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"minimum-wait","kind":"numeric","instruction_id":"wait"}]}
+  },
+  "temperature": {
+    "script": {"id":"temperature","revision":"1","instructions":[{"id":"temperature","text":"Keep temperature at or below 80 °C.","approved_variants":[{"text":"Maintain temperature at or below 80 °C.","approved_by":"synthetic-reviewer","reason":"Explicit approved temperature wording."}]}]},
+    "policy": {"id":"temperature-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"temperature-limit","kind":"numeric","instruction_id":"temperature"}]}
+  },
+  "range": {
+    "script": {"id":"pressure","revision":"1","instructions":[{"id":"pressure","text":"Maintain pressure from 2 to 4 bar."}]},
+    "policy": {"id":"pressure-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"pressure-range","kind":"numeric","instruction_id":"pressure"}]}
+  },
+  "count": {
+    "script": {"id":"bolts","revision":"1","instructions":[{"id":"bolts","text":"Install 4 bolts."}]},
+    "policy": {"id":"bolt-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"bolt-count","kind":"numeric","instruction_id":"bolts"}]}
+  },
+  "clearance": {
+    "script": {"id":"clearance","revision":"1","instructions":[{"id":"clearance","text":"Set clearance to 10 mm."}]},
+    "policy": {"id":"clearance-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"clearance-size","kind":"numeric","instruction_id":"clearance"}]}
+  },
+  "sequence": {
+    "script": {"id":"sequence","revision":"1","instructions":[{"id":"disconnect","text":"Disconnect power."},{"id":"close","text":"Close the supply valve."},{"id":"guard","text":"Open the guard."}]},
+    "policy": {"id":"sequence-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"safe-order","kind":"sequence","instruction_ids":["disconnect","close","guard"]}]}
+  },
+  "unprotected-order": {
+    "script": {"id":"labels","revision":"1","instructions":[{"id":"label","text":"Read the label."},{"id":"serial","text":"Record the serial number."}]},
+    "policy": {"id":"labels-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[]}
+  },
+  "double-negation": {
+    "script": {"id":"double-negation","revision":"1","instructions":[{"id":"guard","text":"Do not leave the guard unlocked."}]},
+    "policy": {"id":"double-negation-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"guard-negation","kind":"polarity","instruction_id":"guard","approved_phrase":"do not","reversed_phrase":"do"}]}
+  },
+  "cold": {
+    "script": {"id":"cold","revision":"1","instructions":[{"id":"cold","text":"Maintain temperature from -20 to -10 °C."}]},
+    "policy": {"id":"cold-policy","revision":"1","approved_by":"synthetic-reviewer","constraints":[{"id":"cold-range","kind":"numeric","instruction_id":"cold"}]}
+  }
+}

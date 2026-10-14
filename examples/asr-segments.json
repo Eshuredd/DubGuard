@@ -1,0 +1,52 @@
+{
+  "script": {
+    "id": "power",
+    "revision": "1",
+    "language": "en",
+    "speaker_count": 1,
+    "instructions": [
+      {
+        "id": "power",
+        "text": "Switch the power off.",
+        "approved_variants": [
+          {
+            "text": "Turn the power off.",
+            "approved_by": "synthetic-reviewer",
+            "reason": "Explicit approved imperative variant."
+          }
+        ]
+      }
+    ]
+  },
+  "policy": {
+    "id": "power-policy",
+    "revision": "1",
+    "approved_by": "synthetic-reviewer",
+    "min_asr_confidence": 0.9,
+    "constraints": [
+      {
+        "id": "power-state",
+        "kind": "polarity",
+        "instruction_id": "power",
+        "approved_phrase": "off",
+        "reversed_phrase": "on"
+      }
+    ]
+  },
+  "transcript": {
+    "source": "asr",
+    "completeness": "complete",
+    "segments": [
+      {
+        "id": "s1",
+        "text": "Switch the power off.",
+        "instruction_id": null,
+        "start_seconds": 1.2,
+        "end_seconds": 2.8,
+        "confidence": 0.98,
+        "uncertain": false,
+        "uncertainty_reason": null
+      }
+    ]
+  }
+}
