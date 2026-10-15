@@ -29,6 +29,7 @@ Implementation style: AI writes agreed code (provisional default; not yet select
 - Python/Pydantic/FastAPI stack familiarity.
 - Learning focus if still unclear.
 - Use defaults or customize preferences.
+
 ## Strong Concepts
 No demonstrated understanding recorded yet.
 
