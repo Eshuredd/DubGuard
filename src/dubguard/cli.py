@@ -20,7 +20,9 @@ def main(argv: list[str] | None = None) -> int:
     verification.add_argument("--hybrid", action="store_true", help="Request advisory semantic verification; unavailable inference requires review")
     evaluation = sub.add_parser("evaluate", help="Run explicit synthetic fixtures and export JSON/Markdown")
     evaluation.add_argument("--output", type=Path, default=Path("reports"))
-    evaluation.add_argument("--hybrid", action="store_true", help="Measure hybrid only if real inference is available; mock never qualifies")
+    evaluation.add_argument("--hybrid", action="store_true", help="Show hybrid path; this alone never starts remote calls")
+    evaluation.add_argument("--remote", action="store_true", help="Explicitly opt into real basic-LLM and hybrid evaluation calls")
+    evaluation.add_argument("--max-cases", type=int, help="Required positive cap for --remote; two model calls per selected case")
     args = parser.parse_args(argv)
     try:
         if args.command == "validate":
@@ -30,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
             data = VerificationRequest.model_validate_json(args.input.read_text(encoding="utf-8"))
             print(verify(data, hybrid=args.hybrid).model_dump_json(indent=2))
         else:
-            report = evaluate(hybrid=args.hybrid)
+            report = evaluate(hybrid=args.hybrid or args.remote, remote=args.remote, max_cases=args.max_cases)
             paths = export_report(report, args.output)
             print(json.dumps({"reports": [str(p.resolve()) for p in paths],
                               "paths": {name: {"status": value["status"], "metrics": value["metrics"]} for name, value in report["paths"].items()}}, indent=2))

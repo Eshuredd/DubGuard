@@ -1,37 +1,31 @@
 # Learner Profile
 
 Learning mode: active
-Onboarding: incomplete
+Onboarding: complete
 
 ## Project
 Situation: Existing — DubGuard Phase 1 is implemented in this conversation.
 Building: English, single-speaker industrial narration verification under reviewer-defined policies.
-Codebase familiarity: Not specified.
-Learning scope: Not specified.
+Codebase familiarity: New (self-reported).
+Learning scope: Whole system — understand DubGuard end to end (user-selected).
 
 ## Experience
-Overall programming: Not specified.
-Stack familiarity: Not specified.
+Overall programming: Intermediate (self-reported).
+Stack familiarity: Beginner with Python, Pydantic, and FastAPI (self-reported).
 
 ## Goals
-Primary: Learn while working on DubGuard; specific focus not specified.
+Primary: Understand how DubGuard works end to end while learning through development.
 Capability goal: Not specified.
 
 ## Preferences
-Checkpoint frequency: Normal (provisional default; not yet selected).
-Question style: Open-ended (provisional default; not yet selected).
-Implementation style: AI writes agreed code (provisional default; not yet selected).
-
-## Remaining onboarding
-- Codebase familiarity.
-- Learning scope.
-- Programming experience.
-- Python/Pydantic/FastAPI stack familiarity.
-- Learning focus if still unclear.
-- Use defaults or customize preferences.
+Checkpoint frequency: Normal (user selected defaults).
+Question style: Open-ended (user selected defaults).
+Implementation style: AI writes agreed code (user selected defaults).
 
 ## Strong Concepts
-No demonstrated understanding recorded yet.
+Learner described a deterministic-first verification flow, validated source
+citations, conservative uncertainty handling, and human approval boundaries
+in their Phase 2A design proposal.
 
 ## Developing Concepts
 None recorded yet.

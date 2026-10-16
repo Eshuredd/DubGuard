@@ -6,7 +6,7 @@ from dubguard.providers import AMDTokenFactoryProvider, DisabledProvider, MockPr
 from dubguard.schemas import SemanticAssessment
 
 
-@pytest.mark.parametrize("provider", [DisabledProvider(), MockProvider(), AMDTokenFactoryProvider()])
+@pytest.mark.parametrize("provider", [DisabledProvider(), MockProvider()])
 def test_local_providers_never_claim_real_inference(case_request, provider):
     result = verify(case_request("A01"), hybrid=True, provider=provider)
     assert result.decision == "REVIEW_REQUIRED"
@@ -14,9 +14,9 @@ def test_local_providers_never_claim_real_inference(case_request, provider):
     assert result.semantic.status != "real"
 
 
-def test_amd_config_does_not_enable_invented_transport(monkeypatch, case_request):
-    monkeypatch.setenv("AMD_TOKEN_FACTORY_ENDPOINT", "configured-but-unused")
-    monkeypatch.setenv("AMD_TOKEN_FACTORY_MODEL", "configured-but-unused")
+def test_invalid_amd_endpoint_never_makes_a_request(monkeypatch, case_request):
+    monkeypatch.setenv("AMD_TOKEN_FACTORY_ENDPOINT", "http://insecure.invalid")
+    monkeypatch.setenv("AMD_TOKEN_FACTORY_MODEL", "test-model")
     monkeypatch.setenv("AMD_TOKEN_FACTORY_API_KEY", "test-only-secret-marker")
     provider = AMDTokenFactoryProvider()
     assessment = provider.verify(case_request("A01"))
@@ -55,7 +55,7 @@ def test_real_provider_contract_stub_cannot_override_deterministic_findings(case
     class ContractStub:
         def verify(self, request):
             return SemanticAssessment(provider="test-contract", status="real", verdict="EQUIVALENT",
-                                      explanation="Test fixture, no network", real_inference=True,
+                                      explanation="Test fixture, no network", real_inference=True, response_valid=True,
                                       call_id="test-fixture-call", model="test-fixture-model")
     assert verify(case_request("C01"), hybrid=True, provider=ContractStub()).decision == "CRITICAL_DEVIATION"
     assert verify(case_request("U07"), hybrid=True, provider=ContractStub()).decision == "REVIEW_REQUIRED"
@@ -73,7 +73,7 @@ def test_failing_real_provider_has_no_aggregate_hybrid_metrics():
         real_inference_available = True
         def verify(self, request):
             raise TimeoutError()
-    path = evaluate(hybrid=True, provider=Failed())["paths"]["C_hybrid"]
+    path = evaluate(hybrid=True, remote=True, max_cases=1, provider=Failed())["paths"]["C_hybrid"]
     assert path["status"] == "incomplete"
     assert path["metrics"] is None
 

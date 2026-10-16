@@ -1,0 +1,108 @@
+{
+  "decision": "CRITICAL_DEVIATION",
+  "findings": [
+    {
+      "rule_id": "POLARITY.REVERSED",
+      "status": "VIOLATION",
+      "constraint_id": "power-state",
+      "instruction_ids": [
+        "power"
+      ],
+      "approved": [
+        {
+          "source": "approved",
+          "instruction_id": "power",
+          "segment_id": null,
+          "text": "Switch the power off.",
+          "start_char": 0,
+          "end_char": 21,
+          "start_seconds": null,
+          "end_seconds": null,
+          "timing_scope": null
+        }
+      ],
+      "observed": [
+        {
+          "source": "observed",
+          "instruction_id": "power",
+          "segment_id": "s1",
+          "text": "Switch the power on.",
+          "start_char": 0,
+          "end_char": 20,
+          "start_seconds": null,
+          "end_seconds": null,
+          "timing_scope": null
+        }
+      ],
+      "explanation": "The reviewer-protected polarity phrase was replaced by its declared reversal in the same instruction template.",
+      "provider": null,
+      "model_call_id": null
+    },
+    {
+      "rule_id": "SEMANTIC.INVALID_EVIDENCE",
+      "status": "UNRESOLVED",
+      "constraint_id": "power-state",
+      "instruction_ids": [
+        "power"
+      ],
+      "approved": [
+        {
+          "source": "approved",
+          "instruction_id": "power",
+          "segment_id": null,
+          "text": "Switch the power off.",
+          "start_char": 0,
+          "end_char": 21,
+          "start_seconds": null,
+          "end_seconds": null,
+          "timing_scope": null
+        }
+      ],
+      "observed": [],
+      "explanation": "A model finding had an invalid requirement, source reference, quote, or offset. Human review is required.",
+      "provider": "amd-token-factory",
+      "model_call_id": "7876aed8601c4f9aa8cb6a488af8e4a7"
+    },
+    {
+      "rule_id": "SEMANTIC.INVALID_EVIDENCE",
+      "status": "UNRESOLVED",
+      "constraint_id": null,
+      "instruction_ids": [],
+      "approved": [],
+      "observed": [],
+      "explanation": "The model reported a deviation without a validated supporting finding. Human review is required.",
+      "provider": "amd-token-factory",
+      "model_call_id": "7876aed8601c4f9aa8cb6a488af8e4a7"
+    }
+  ],
+  "script_id": "power",
+  "script_revision": "1",
+  "policy_id": "power-policy",
+  "policy_revision": "1",
+  "engine_version": "0.1.0",
+  "mode": "hybrid",
+  "semantic": {
+    "provider": "amd-token-factory",
+    "status": "real",
+    "verdict": "UNRESOLVED",
+    "explanation": "The transcript states 'Switch the power on.' which directly contradicts the approved instruction to switch the power off. The polarity constraint is violated.",
+    "real_inference": true,
+    "call_id": "7876aed8601c4f9aa8cb6a488af8e4a7",
+    "model": "self-dploy/DeepSeek-V4-Flash",
+    "findings": [],
+    "issues": [
+      {
+        "requirement_id": "power-state",
+        "explanation": "A model finding had an invalid requirement, source reference, quote, or offset."
+      },
+      {
+        "requirement_id": null,
+        "explanation": "The model reported a deviation without a validated supporting finding."
+      }
+    ],
+    "response_valid": true,
+    "latency_ms": 21837.66808407381,
+    "attempts": 1
+  },
+  "safety_notice": "Review aid only. PASS_CANDIDATE is not safety certification or release approval."
+}

@@ -1,18 +1,20 @@
 # DubGuard — Industrial Narration Review
 
-Phase 1 for AMD Developer Hackathon Act III, **Intelligent Industry**. A CPU-local,
+Phases 1 and 2A for AMD Developer Hackathon Act III, **Intelligent Industry**. A CPU-local,
 text-first review engine compares an approved English industrial script with
 single-speaker narration transcripts under reviewer-defined constraints.
 
 **PASS_CANDIDATE is not safety certification, release approval, or a guarantee of
 semantic equivalence.** Ambiguous evidence requires human review. No audio is
-transcribed by this project, and no AMD-backed inference has been run.
+transcribed by this project. AMD inference is available only when explicitly
+selected for hybrid verification or remote evaluation.
 
 ## Run locally
 
 Python 3.11+ is required; the delivered reports were generated with Python 3.11.9.
 Run these commands from the project directory. Installation fetches ordinary
-Python dependencies; execution needs no API key, network service, GPU, or model.
+Python dependencies; deterministic execution needs no API key, network service,
+GPU, or model.
 
 ```bash
 python3 -m venv .venv
@@ -59,8 +61,8 @@ development service with no identity/authentication or approval workflow.
 | CLI, FastAPI validation/verification/report endpoints | Implemented and tested |
 | 60 explicit synthetic fixtures, baseline, reproducible JSON/Markdown | Implemented and measured locally |
 | Local semantic provider | Exact-text **mock**, solely for interface/failure tests |
-| AMD Token Factory provider | **Scaffold**, unavailable even when environment fields are set |
-| Real semantic evaluation path C | Implemented runner; **skipped** without real inference provenance |
+| AMD Token Factory provider | Real OpenAI-compatible chat completions via HTTPS with bounded retries/timeouts and source-validated JSON |
+| Real semantic evaluation paths | Prepared as opt-in, capped, separate basic LLM and policy-hybrid paths; local reports skip them |
 | Timestamped ASR segment input | Implemented contract; **no audio/ASR integration** |
 | CPU Dockerfile | Provided; container build/run not verified because the local daemon is unavailable |
 
@@ -177,7 +179,7 @@ set, not a held-out benchmark.
 |---|---:|---:|---:|---:|
 | A: normalized text-difference baseline | 24/24 = 100% | 24/45 = 53.33% | 16/24 = 66.67% | 7/60 = 11.67% |
 | B: deterministic policy engine | 22/24 = 91.67% | 22/22 = 100% | 0/24 = 0% | 14/60 = 23.33% |
-| C: policy + real semantic provider | Skipped | — | — | — |
+| D: basic LLM and C: policy + real semantic provider | Skipped in the local report | — | — | — |
 
 Both measured paths have zero unsafe passes **on this set**. B escalates C22 and
 C23 to review instead of calling them critical; both count as recall misses.
@@ -196,6 +198,18 @@ dataset/code SHA-256 fingerprints, and runtime versions. No generated timestamps
 durations, or random seeds affect local report bytes. Re-running with the same
 source, fixtures, and Python/dependencies produces the same bytes.
 
+The single Phase 2A smoke call is recorded separately in
+`reports/amd_smoke.json`. It used the existing `examples/critical.json` and one
+HTTP attempt. The returned model alias was `self-dploy/DeepSeek-V4-Flash`; its
+measured provider latency was about 21.84 seconds. The model explanation noted
+the off→on reversal. Its detailed citation failed local reference validation,
+so the semantic verdict became `UNRESOLVED` with an issue linked to
+`power-state`. The deterministic engine still returned `CRITICAL_DEVIATION`.
+This is one real inference observation, not a benchmark or proof of semantic
+accuracy. The provider did not retain the rejected raw citation in the report.
+The citation-template prompt improvement was made **after** this call and has
+only mocked HTTP coverage so far; it has not been validated by another live call.
+
 Recall counts every critical→review decision as a miss. Precision treats a critical
 alert on either acceptable or unresolved labels as a false positive. False-alert
 rate means acceptable→critical / acceptable; the report separately includes the
@@ -205,50 +219,57 @@ Zero-denominator ratios are `null`, never an invented perfect score.
 
 ## Semantic and AMD integration
 
-`SemanticProvider` is a pluggable interface. Provider configuration is read only
-from environment variables; `.env.example` has empty AMD fields and no invented
-endpoint or model. `.env` files are ignored by Git and Docker; they are not
-automatically loaded. The default provider is `disabled`.
+`SemanticProvider` is a pluggable interface. When selected, the AMD provider
+loads `.env` from the current working directory without overriding exported
+environment variables. `.env` is Git-ignored; the API key is sent only in the
+Bearer header and is never included in the model prompt or returned result.
+`.env.example` lists the verified base URL and model with a blank key. Exported
+values can override the endpoint, model, timeout, and retry cap. The provider
+accepts either the base URL or a full `/chat/completions` URL and requires HTTPS.
+Without a configured provider, local deterministic verification remains available.
 
 ```bash
 DUBGUARD_SEMANTIC_PROVIDER=mock .venv/bin/python -m dubguard verify examples/acceptable.json --hybrid
 DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard verify examples/acceptable.json --hybrid
-DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard evaluate --hybrid --output reports-amd-pending
+DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard evaluate --hybrid --output reports-local
+# Explicitly opt in to two real calls per selected case; this example selects five.
+DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard evaluate --remote --max-cases 5 --output reports-amd-5
 ```
 
-The mock is an exact-text stub, not semantic inference. The AMD scaffold reports
-missing configuration or an unimplemented transport, even if all environment
-fields are populated. Neither makes a network call. Hybrid verification with an
-unavailable/mock provider adds `SEMANTIC.UNAVAILABLE` and requires review unless
-an independent critical finding already exists. Deterministic verification is
-unaffected by remote unavailability.
+The mock is an exact-text stub, not semantic inference. Hybrid verification with
+an unavailable/mock provider adds `SEMANTIC.UNAVAILABLE` and requires review
+unless an independent critical finding already exists. Deterministic verification
+remains available during remote failure.
 
-A future real assessment must supply provider/model identity and a real call ID.
-Malformed responses and provider exceptions preserve deterministic evidence,
-return unavailable status, and do not expose exception text or secrets. Semantic
-advice is deliberately advisory: it cannot erase deterministic violations or
-unresolved evidence, and a provider-reported deviation requests review. Path C
-is measured only when real inference is available and all cases have validated
-real-call provenance; partial failures suppress aggregate hybrid metrics. Unit
-tests use in-memory protocol fixtures, never exported as real measurements.
+The AMD call sends the script, policy, and transcript as source data and asks for
+structured JSON. It includes source-derived full-span citation templates to help
+the model return exact offsets. For each model finding, local validation checks its requirement,
+instruction, and segment IDs; exact quoted text and character offsets; policy
+type; and segment alignment. Timestamps come solely from transcript segments.
+Fabricated or inconsistent citations are rejected and become unresolved review
+issues. The response records actual model and call IDs, attempts, and measured
+latency when available. Model findings are labeled as advisory. A model-declared
+deviation requires human review; a model-declared equivalence cannot erase a
+deterministic violation or uncertainty. Reviewers must listen to the source audio.
 
-Once AMD Token Factory access is available:
+Transport defaults to a 40-second request timeout and at most two retries (three
+attempts total) for timeout, transport error, HTTP 429, or common 5xx errors.
+`Retry-After` waits are capped at two seconds. Non-retryable HTTP errors, malformed
+JSON, and invalid evidence do not expose raw response bodies or credentials.
 
-1. Confirm the actual endpoint, supported model ID, authentication, request and
-   response formats, limits, and data-handling expectations with AMD.
-2. Implement the transport in `providers.py`, with finite timeouts, bounded
-   retries, secret redaction, structured-output validation, and real call/model
-   provenance. Preserve the unavailable fallback and conservative decision rules.
-3. Design policy-aware prompts that treat transcript text as untrusted data and
-   request source-grounded evidence. Validate returned spans against supplied
-   scripts/transcripts; do not trust an LLM equivalence assertion by itself.
-4. With authorization for any paid usage, run a genuine smoke call and then path C
-   over the unchanged fixtures. Record actual calls and failures. Report accuracy,
-   latency, or AMD claims only from those real measurements.
-5. Have industrial reviewers adjudicate a separate held-out corpus, expand numeric
-   and semantic challenge coverage, and decide whether any semantic findings can
-   graduate beyond advisory review. Build an ASR adapter separately with tested
-   timing/confidence calibration; do not confuse it with the current text API.
+Remote evaluation is separate from normal verification. `--hybrid` alone never
+calls AMD in `evaluate`. `--remote` requires `--max-cases`; it runs a basic LLM
+comparison without reviewer policy and the policy-hybrid engine on the **same
+explicit subset**. Each selected case makes two model calls plus bounded retries.
+The basic LLM path is diagnostic only and cannot approve a recording. Partial
+failures suppress aggregate remote metrics. The local reports continue to use
+only the reproducible baseline and policy engine; no full remote benchmark is run
+automatically.
+
+Recommended next phase: independently adjudicate held-out industrial narration
+examples, calibrate semantic evidence and uncertainty rates, run a separately
+authorized capped evaluation, and build an ASR adapter with measured timing and
+confidence quality. Keep human audio review and final approval outside the model.
 
 ## CPU container
 
@@ -268,7 +289,8 @@ independently of Docker.
 - `src/dubguard/schemas.py`: public contracts and cross-policy validation.
 - `src/dubguard/text.py`, `engine.py`: normalization, numeric grammar, deterministic
   policy rules, source evidence, and decision aggregation.
-- `src/dubguard/providers.py`: disabled/mock providers and AMD integration TODOs.
+- `src/dubguard/providers.py`, `semantic_validation.py`: local/mock and real AMD
+  providers, response parsing, and source-reference checks.
 - `src/dubguard/evaluation.py`, `data/`: explicit fixtures, metrics, report export.
 - `src/dubguard/api.py`, `cli.py`: FastAPI endpoints and local CLI.
 - `tests/`: corpus behavior, source-backed evidence, grammar edge cases, policy
@@ -277,7 +299,7 @@ independently of Docker.
 - `examples/`, `requirements*.txt`, `.env.example`, `Dockerfile`: runnable inputs
   and local setup; `IMPLEMENTATION_PLAN.md` records the initial inspection/plan.
 
-The initial workspace was empty and was not a Git repository. No code was
-replaced, and no Git initialization, commit, or push was performed. Test output
+The initial Phase 1 workspace was empty; Git metadata is now present. No Phase 2A
+commit or push was performed. Test output
 may include one upstream Starlette/AnyIO deprecation warning; it does not fail
 the suite.

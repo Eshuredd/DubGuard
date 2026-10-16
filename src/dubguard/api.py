@@ -9,7 +9,7 @@ from .engine import verify
 from .evaluation import evaluate, markdown_report
 from .schemas import ReviewResult, ScriptPolicy, VerificationRequest
 
-app = FastAPI(title="DubGuard — Industrial Narration Review", version="0.1.0",
+app = FastAPI(title="DubGuard — Industrial Narration Review", version="0.2.0",
               description="English single-speaker text review. PASS_CANDIDATE is not safety certification or release approval.")
 
 

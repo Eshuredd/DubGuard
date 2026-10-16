@@ -9,7 +9,7 @@ import platform
 
 from .engine import uncertainty, verify
 from .providers import SemanticProvider, provider_from_env
-from .schemas import Decision, EvaluationCase, ScriptPolicy, VerificationRequest
+from .schemas import Decision, EvaluationCase, ScriptPolicy, SemanticAssessment, VerificationRequest
 from .text import normalize
 
 EXPECTED = {"ACCEPTABLE": "PASS_CANDIDATE", "CRITICAL": "CRITICAL_DEVIATION", "UNRESOLVED": "REVIEW_REQUIRED"}
@@ -82,12 +82,21 @@ def calculate_metrics(rows: list[dict]) -> dict:
     }
 
 
-def evaluate(*, hybrid: bool = False, provider: SemanticProvider | None = None) -> dict:
+def evaluate(*, hybrid: bool = False, provider: SemanticProvider | None = None,
+             remote: bool = False, max_cases: int | None = None) -> dict:
+    """Local paths always run; live AMD paths require remote=True and a case cap."""
+    if remote and not hybrid:
+        raise ValueError("remote evaluation requires hybrid=True")
+    if remote and (max_cases is None or max_cases < 1):
+        raise ValueError("remote evaluation requires an explicit positive max_cases")
+    if not remote and max_cases is not None:
+        raise ValueError("max_cases requires remote=True")
     profiles, cases, fingerprint = load_dataset()
-    rows_a, rows_b, rows_c = [], [], []
+    rows_a, rows_b, rows_subset, rows_basic, rows_c = [], [], [], [], []
     active_provider = (provider or provider_from_env()) if hybrid else None
-    run_hybrid = hybrid and active_provider.real_inference_available
-    for case in cases:
+    run_remote = bool(remote and active_provider.real_inference_available)
+    selected_count = min(max_cases or 0, len(cases)) if remote else 0
+    for index, case in enumerate(cases):
         request = request_for(case, profiles)
         base = {"id": case.id, "category": case.category, "label": case.label.value,
                 "rationale": case.rationale, "profile": case.profile,
@@ -97,7 +106,20 @@ def evaluate(*, hybrid: bool = False, provider: SemanticProvider | None = None) 
         deterministic = verify(request)
         rows_b.append({**base, "decision": deterministic.decision.value,
                        "result": deterministic.model_dump(mode="json")})
-        if run_hybrid:
+        if run_remote and index < selected_count:
+            rows_subset.append(rows_b[-1])
+            try:
+                baseline_assessment = SemanticAssessment.model_validate(active_provider.verify_basic(request))
+            except Exception:
+                baseline_assessment = SemanticAssessment(provider="unavailable", status="unavailable",
+                                                          explanation="Basic LLM provider failed.")
+            basic_decision = {"EQUIVALENT": Decision.PASS_CANDIDATE,
+                              "DEVIATION": Decision.CRITICAL_DEVIATION,
+                              "UNRESOLVED": Decision.REVIEW_REQUIRED}[baseline_assessment.verdict]
+            if baseline_assessment.status != "real":
+                basic_decision = Decision.REVIEW_REQUIRED
+            rows_basic.append({**base, "decision": basic_decision.value,
+                               "semantic": baseline_assessment.model_dump(mode="json")})
             result = verify(request, hybrid=True, provider=active_provider)
             rows_c.append({**base, "decision": result.decision.value, "result": result.model_dump(mode="json")})
 
@@ -105,21 +127,38 @@ def evaluate(*, hybrid: bool = False, provider: SemanticProvider | None = None) 
         return {"status": "measured", "metrics": calculate_metrics(rows), "cases": rows,
                 "failures": [r for r in rows if r["decision"] != EXPECTED[r["label"]]]}
 
-    if run_hybrid and all(r["result"]["semantic"]["status"] == "real" for r in rows_c):
-        hybrid_report = path_report(rows_c)
-    elif run_hybrid:
-        hybrid_report = {"status": "incomplete", "metrics": None, "cases": rows_c,
-                         "reason": "At least one real inference failed or lacked provenance; no aggregate hybrid result is claimed."}
+    if run_remote:
+        good_basic = all(r["semantic"]["status"] == "real" and r["semantic"]["response_valid"] for r in rows_basic)
+        good_hybrid = all(r["result"]["semantic"]["status"] == "real"
+                          and r["result"]["semantic"]["response_valid"]
+                          and not r["result"]["semantic"]["issues"] for r in rows_c)
+        basic_report = path_report(rows_basic) if good_basic else {
+            "status": "incomplete", "metrics": None, "cases": rows_basic,
+            "reason": "At least one basic LLM call failed or returned invalid JSON; no aggregate result is claimed."}
+        hybrid_report = path_report(rows_c) if good_hybrid else {
+            "status": "incomplete", "metrics": None, "cases": rows_c,
+            "reason": "At least one hybrid call failed or returned invalid evidence; no aggregate result is claimed."}
     else:
+        basic_report = {"status": "skipped", "metrics": None, "cases": [],
+                        "reason": "Basic LLM baseline requires explicit remote opt-in and real inference."}
         hybrid_report = {"status": "skipped", "metrics": None, "cases": [],
                          "reason": "Real inference is unavailable or was not requested. No mock/LLM/AMD performance result is claimed."}
     package_root = resources.files("dubguard")
-    code_files = ["schemas.py", "text.py", "engine.py", "providers.py", "evaluation.py"]
+    code_files = ["schemas.py", "text.py", "engine.py", "providers.py", "semantic_validation.py", "evaluation.py"]
+    paths = {"A_normalized_diff": path_report(rows_a), "B_policy_engine": path_report(rows_b)}
+    if run_remote:
+        paths["B_policy_engine_selected_cases"] = path_report(rows_subset)
+    paths["D_basic_llm"] = basic_report
+    paths["C_hybrid"] = hybrid_report
     return {
-        "schema_version": "1", "engine_version": "0.1.0", "dataset_sha256": fingerprint,
+        "schema_version": "1", "engine_version": "0.2.0", "dataset_sha256": fingerprint,
         "code_sha256": {name: sha256(package_root.joinpath(name).read_bytes()).hexdigest() for name in code_files},
         "runtime": {"python": platform.python_version(), **{p: metadata.version(p) for p in ("pydantic", "fastapi")}},
-        "dataset": {"count": len(cases), "profiles": len(profiles), "label_origin": "Explicit synthetic fixtures with manually specified labels and rationales; no external LLM labels or industrial validation."},
+        "dataset": {"count": len(cases), "profiles": len(profiles),
+                    "remote_selected_count": selected_count if run_remote else 0,
+                    "label_origin": "Explicit synthetic fixtures with manually specified labels and rationales; no external LLM labels or industrial validation."},
+        "remote_request_attempts": (sum((r["semantic"].get("attempts") or 0) for r in rows_basic)
+                                    + sum((r["result"]["semantic"].get("attempts") or 0) for r in rows_c)),
         "metric_definitions": {
             "critical_deviation_recall": "critical predicted critical / all critical; critical sent to review counts as a miss",
             "critical_deviation_precision": "critical predicted critical / all predicted critical; unresolved labels predicted critical count as false positives",
@@ -131,16 +170,17 @@ def evaluate(*, hybrid: bool = False, provider: SemanticProvider | None = None) 
         },
         "limitations": ["Small, curated synthetic development set, not a held-out industrial benchmark.",
                         "Instruction mappings and transcript completeness are supplied review metadata.",
-                        "No audio transcription, industrial safety approval, latency benchmark, or AMD-backed inference has been demonstrated."],
-        "paths": {"A_normalized_diff": path_report(rows_a), "B_policy_engine": path_report(rows_b), "C_hybrid": hybrid_report},
+                        "No audio transcription or industrial safety approval is demonstrated.",
+                        "Basic LLM verdicts are diagnostic evaluation outputs, not production approval decisions."],
+        "paths": paths,
     }
 
 
 def markdown_report(report: dict) -> str:
-    lines = ["# DubGuard Phase 1 synthetic evaluation", "",
+    lines = ["# DubGuard synthetic evaluation", "",
              f"Cases: **{report['dataset']['count']}**. Profiles: **{report['dataset']['profiles']}**.", "",
              f"Dataset SHA-256: `{report['dataset_sha256']}`", "",
-             "These are reproducible local development results, not safety certification or AMD performance measurements.", "",
+             "Local paths are reproducible development results. Remote paths, if measured, use actual calls on the explicit selected subset. None is safety certification.", "",
              "| Path | Count | Recall | Precision | Acceptable false-alert rate | Unresolved rate | Errors | Unsafe passes |",
              "|---|---:|---:|---:|---:|---:|---:|---:|"]
     def percent(value):

@@ -1,15 +1,16 @@
-# DubGuard Phase 1 synthetic evaluation
+# DubGuard synthetic evaluation
 
 Cases: **60**. Profiles: **13**.
 
 Dataset SHA-256: `ed0a2f2b7879718e308e99a158fec0c502c541e8fb476b7f769cf87d739a0da3`
 
-These are reproducible local development results, not safety certification or AMD performance measurements.
+Local paths are reproducible development results. Remote paths, if measured, use actual calls on the explicit selected subset. None is safety certification.
 
 | Path | Count | Recall | Precision | Acceptable false-alert rate | Unresolved rate | Errors | Unsafe passes |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | A_normalized_diff | 60 | 100.00% | 53.33% | 66.67% | 11.67% | 21 | 0 |
 | B_policy_engine | 60 | 91.67% | 100.00% | 0.00% | 23.33% | 2 | 0 |
+| D_basic_llm (skipped) | — | — | — | — | — | — | — |
 | C_hybrid (skipped) | — | — | — | — | — | — | — |
 
 ## Definitions and scope
@@ -166,6 +167,10 @@ Label counts: {"ACCEPTABLE": 24, "CRITICAL": 24, "UNRESOLVED": 12}.
   Observed: ["Bypassing the interlock is permitted."].
   Label rationale: Manually labeled bypass permission despite a changed imperative template; engine must not clear it.
 
+## D_basic_llm
+
+Basic LLM baseline requires explicit remote opt-in and real inference.
+
 ## C_hybrid
 
 Real inference is unavailable or was not requested. No mock/LLM/AMD performance result is claimed.
@@ -174,4 +179,5 @@ Real inference is unavailable or was not requested. No mock/LLM/AMD performance 
 
 - Small, curated synthetic development set, not a held-out industrial benchmark.
 - Instruction mappings and transcript completeness are supplied review metadata.
-- No audio transcription, industrial safety approval, latency benchmark, or AMD-backed inference has been demonstrated.
+- No audio transcription or industrial safety approval is demonstrated.
+- Basic LLM verdicts are diagnostic evaluation outputs, not production approval decisions.

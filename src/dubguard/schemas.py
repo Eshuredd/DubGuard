@@ -207,6 +207,25 @@ class Finding(Model):
     approved: list[EvidenceSpan] = Field(default_factory=list)
     observed: list[EvidenceSpan] = Field(default_factory=list)
     explanation: str
+    provider: str | None = None
+    model_call_id: str | None = None
+
+
+class SemanticFinding(Model):
+    """Validated model advice. Its evidence is copied from the request, never trusted text."""
+
+    requirement_id: Identifier
+    kind: Literal["NUMERIC_LIMIT", "PROCEDURE_ORDER", "WARNING_POLICY", "POLARITY", "PARAPHRASE", "OTHER"]
+    verdict: Literal["EQUIVALENT", "DEVIATION", "UNRESOLVED"]
+    instruction_id: Identifier
+    approved: list[EvidenceSpan] = Field(min_length=1, max_length=20)
+    observed: list[EvidenceSpan] = Field(default_factory=list, max_length=20)
+    explanation: Text
+
+
+class SemanticIssue(Model):
+    requirement_id: Identifier | None = None
+    explanation: str = Field(min_length=1, max_length=300)
 
 
 class SemanticAssessment(Model):
@@ -217,12 +236,17 @@ class SemanticAssessment(Model):
     real_inference: bool = False
     call_id: str | None = None
     model: str | None = None
+    findings: list[SemanticFinding] = Field(default_factory=list, max_length=500)
+    issues: list[SemanticIssue] = Field(default_factory=list, max_length=500)
+    response_valid: bool = False
+    latency_ms: float | None = Field(default=None, ge=0)
+    attempts: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def provenance(self):
         if self.status == "real":
-            if not self.real_inference or not self.call_id or not self.model:
-                raise ValueError("real inference requires call and model provenance")
+            if not self.real_inference or not self.call_id or not self.model or not self.response_valid:
+                raise ValueError("real inference requires validated response, call ID, and model provenance")
         elif self.real_inference:
             raise ValueError("mock/unavailable assessments cannot claim real inference")
         return self
@@ -235,7 +259,7 @@ class ReviewResult(Model):
     script_revision: str
     policy_id: str
     policy_revision: str
-    engine_version: str = "0.1.0"
+    engine_version: str = "0.2.0"
     mode: Literal["deterministic", "hybrid"] = "deterministic"
     semantic: SemanticAssessment | None = None
     safety_notice: str = "Review aid only. PASS_CANDIDATE is not safety certification or release approval."

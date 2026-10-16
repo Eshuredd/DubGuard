@@ -192,9 +192,31 @@ def verify(request: VerificationRequest, *, hybrid: bool = False,
         if semantic.status != "real":
             add("SEMANTIC.UNAVAILABLE", Status.UNRESOLVED,
                 "Requested real semantic verification did not run. Mock or unavailable inference cannot clear this request.")
-        elif semantic.verdict != "EQUIVALENT":
-            add("SEMANTIC.REVIEW", Status.UNRESOLVED,
-                "The semantic provider reported deviation or uncertainty; human review is required. Its advice is not ground truth.")
+        else:
+            constraints_by_id = {c.id: c for c in request.policy.constraints}
+            for issue in semantic.issues:
+                constraint = constraints_by_id.get(issue.requirement_id)
+                related = (constraint.instruction_ids if constraint.kind == "sequence" else
+                           [constraint.instruction_id]) if constraint else []
+                findings.append(Finding(rule_id="SEMANTIC.INVALID_EVIDENCE", status=Status.UNRESOLVED,
+                                        constraint_id=issue.requirement_id, instruction_ids=related,
+                                        approved=[approved_evidence(instructions[i]) for i in related],
+                                        explanation=issue.explanation + " Human review is required.",
+                                        provider=semantic.provider, model_call_id=semantic.call_id))
+            for advice in semantic.findings:
+                rule = ("SEMANTIC.SUSPECTED_DEVIATION" if advice.verdict == "DEVIATION" else
+                        "SEMANTIC.UNCERTAIN" if advice.verdict == "UNRESOLVED" else "SEMANTIC.EQUIVALENT_ADVICE")
+                findings.append(Finding(rule_id=rule,
+                                        status=Status.SATISFIED if advice.verdict == "EQUIVALENT" else Status.UNRESOLVED,
+                                        constraint_id=advice.requirement_id,
+                                        instruction_ids=[advice.instruction_id],
+                                        approved=advice.approved, observed=advice.observed,
+                                        explanation="AMD advisory: " + advice.explanation,
+                                        provider=semantic.provider, model_call_id=semantic.call_id))
+            if semantic.verdict != "EQUIVALENT" and not semantic.issues and not any(
+                    f.verdict != "EQUIVALENT" for f in semantic.findings):
+                add("SEMANTIC.REVIEW", Status.UNRESOLVED,
+                    "The semantic provider reported deviation or uncertainty without a validated finding; human review is required.")
         # Even a real EQUIVALENT opinion cannot remove deterministic uncertainty.
 
     statuses = {f.status for f in findings}

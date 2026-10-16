@@ -1,22 +1,25 @@
 {
   "code_sha256": {
-    "engine.py": "e9e377332019f08a89702d2649309482d2a9b4fcc7a0029f718c9952243e1073",
-    "evaluation.py": "6520d9a119f8a45631b48505c09ad8be07cd957c843f0987272cba568279b38f",
-    "providers.py": "0d562bd77942190ded5e7a9db5e37227ae030fac11a1200e9637c1364ff7bd4d",
-    "schemas.py": "07e10c6b25f31d001ba62c4f33727946de6c5d1ff7696bb715557bbeb5c22bf1",
+    "engine.py": "54c05a248664df95859ec05fea3d4b2cb2e35b01ae23f291caad0cc041f5b42c",
+    "evaluation.py": "1e829cd85ead0497a4a9188ae432d0b4a28b2f28f5f9367c7696f11cb3bc6ca5",
+    "providers.py": "2d350fc17d253cf778bd8ced78d18665801556a18ee38a99800d4c2b41788289",
+    "schemas.py": "f9500d4462c54cd13cf13548779d38cb50eea41db625fe91dae33176f47eb69f",
+    "semantic_validation.py": "46fdafa85afbd45c524985819c6df74de317e81ddd3535fb1b76d0a4f97f25d2",
     "text.py": "7332d71e9f3558b72ad79cfacdb02a059088ed5f96aa1df50c5d367da7e11b1f"
   },
   "dataset": {
     "count": 60,
     "label_origin": "Explicit synthetic fixtures with manually specified labels and rationales; no external LLM labels or industrial validation.",
-    "profiles": 13
+    "profiles": 13,
+    "remote_selected_count": 0
   },
   "dataset_sha256": "ed0a2f2b7879718e308e99a158fec0c502c541e8fb476b7f769cf87d739a0da3",
-  "engine_version": "0.1.0",
+  "engine_version": "0.2.0",
   "limitations": [
     "Small, curated synthetic development set, not a held-out industrial benchmark.",
     "Instruction mappings and transcript completeness are supplied review metadata.",
-    "No audio transcription, industrial safety approval, latency benchmark, or AMD-backed inference has been demonstrated."
+    "No audio transcription or industrial safety approval is demonstrated.",
+    "Basic LLM verdicts are diagnostic evaluation outputs, not production approval decisions."
   ],
   "metric_definitions": {
     "acceptable_escalation_rate": "acceptable predicted critical or review / all acceptable",
@@ -1340,7 +1343,7 @@
           "rationale": "Original power instruction is unchanged.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -1361,6 +1364,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -1374,6 +1378,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -1396,6 +1401,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -1409,6 +1415,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -1437,7 +1444,7 @@
           "rationale": "Reviewer explicitly approved turn instead of switch.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -1458,6 +1465,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 19,
@@ -1471,6 +1479,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -1493,6 +1502,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 19,
@@ -1506,6 +1516,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -1534,7 +1545,7 @@
           "rationale": "Reviewer explicitly approved leave closed.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -1555,6 +1566,7 @@
                 "instruction_ids": [
                   "valve"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 23,
@@ -1568,6 +1580,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -1590,6 +1603,7 @@
                 "instruction_ids": [
                   "valve"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 23,
@@ -1603,6 +1617,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -1631,7 +1646,7 @@
           "rationale": "Never is an explicitly approved prohibition, not a reversal.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -1652,6 +1667,7 @@
                 "instruction_ids": [
                   "interlock"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 27,
@@ -1665,6 +1681,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -1687,6 +1704,7 @@
                 "instruction_ids": [
                   "interlock"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 27,
@@ -1700,6 +1718,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -1728,7 +1747,7 @@
           "rationale": "Approved warning paraphrase preserves the required isolation step.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -1749,6 +1768,7 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 39,
@@ -1762,6 +1782,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WARNING.MATCH",
                 "status": "SATISFIED"
               },
@@ -1784,6 +1805,7 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 39,
@@ -1797,6 +1819,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -1825,7 +1848,7 @@
           "rationale": "One minute is exactly 60 seconds and this phrasing is approved.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -1846,6 +1869,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 24,
@@ -1859,6 +1883,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.MATCH",
                 "status": "SATISFIED"
               },
@@ -1881,6 +1906,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 24,
@@ -1894,6 +1920,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -1922,7 +1949,7 @@
           "rationale": "Same template and exact 60-second to 1-minute conversion.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -1943,6 +1970,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 23,
@@ -1956,6 +1984,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -1978,6 +2007,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 23,
@@ -1991,6 +2021,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -2019,7 +2050,7 @@
           "rationale": "176 Fahrenheit is exactly 80 Celsius with unchanged inclusive upper bound.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2040,6 +2071,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 36,
@@ -2053,6 +2085,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -2075,6 +2108,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 36,
@@ -2088,6 +2122,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -2116,7 +2151,7 @@
           "rationale": "353.15 kelvin is exactly 80 Celsius.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2137,6 +2172,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 38,
@@ -2150,6 +2186,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -2172,6 +2209,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 38,
@@ -2185,6 +2223,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -2213,7 +2252,7 @@
           "rationale": "Both pressure endpoints convert exactly from bar to kPa.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2234,6 +2273,7 @@
                 "instruction_ids": [
                   "pressure"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 38,
@@ -2247,6 +2287,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -2269,6 +2310,7 @@
                 "instruction_ids": [
                   "pressure"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 38,
@@ -2282,6 +2324,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -2310,7 +2353,7 @@
           "rationale": "One centimeter equals ten millimeters.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2331,6 +2374,7 @@
                 "instruction_ids": [
                   "clearance"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 22,
@@ -2344,6 +2388,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -2366,6 +2411,7 @@
                 "instruction_ids": [
                   "clearance"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 22,
@@ -2379,6 +2425,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -2407,7 +2454,7 @@
           "rationale": "Case and whitespace alone do not change an instruction.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2428,6 +2475,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 27,
@@ -2441,6 +2489,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -2463,6 +2512,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 27,
@@ -2476,6 +2526,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -2504,7 +2555,7 @@
           "rationale": "Decimal formatting preserves the exact count.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2525,6 +2576,7 @@
                 "instruction_ids": [
                   "bolts"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 18,
@@ -2538,6 +2590,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -2560,6 +2613,7 @@
                 "instruction_ids": [
                   "bolts"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 18,
@@ -2573,6 +2627,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -2605,7 +2660,7 @@
           "rationale": "All explicitly protected steps occur in approved order.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2626,6 +2681,7 @@
                 "instruction_ids": [
                   "disconnect"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 17,
@@ -2639,6 +2695,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -2661,6 +2718,7 @@
                 "instruction_ids": [
                   "close"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 23,
@@ -2674,6 +2732,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -2696,6 +2755,7 @@
                 "instruction_ids": [
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 15,
@@ -2709,6 +2769,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -2755,6 +2816,7 @@
                   "close",
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 17,
@@ -2790,6 +2852,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "SEQUENCE.MATCH",
                 "status": "SATISFIED"
               }
@@ -2820,7 +2883,7 @@
           "rationale": "This reviewer imposed no ordering constraint on the two exact administrative steps.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2841,6 +2904,7 @@
                 "instruction_ids": [
                   "label"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 15,
@@ -2854,6 +2918,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -2876,6 +2941,7 @@
                 "instruction_ids": [
                   "serial"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 25,
@@ -2889,6 +2955,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -2917,7 +2984,7 @@
           "rationale": "The exact prohibition contains unlocked; substring polarity matching must not raise an alarm.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -2938,6 +3005,7 @@
                 "instruction_ids": [
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 32,
@@ -2951,6 +3019,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -2973,6 +3042,7 @@
                 "instruction_ids": [
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 32,
@@ -2986,6 +3056,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -3014,7 +3085,7 @@
           "rationale": "Negative temperature range is unchanged.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3035,6 +3106,7 @@
                 "instruction_ids": [
                   "cold"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 40,
@@ -3048,6 +3120,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.MATCH",
                 "status": "SATISFIED"
               },
@@ -3070,6 +3143,7 @@
                 "instruction_ids": [
                   "cold"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 40,
@@ -3083,6 +3157,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -3111,7 +3186,7 @@
           "rationale": "Complete exact ASR evidence exceeds the configured confidence threshold and supplies segment times.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3132,6 +3207,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -3145,6 +3221,7 @@
                     "timing_scope": "segment"
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -3167,6 +3244,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -3180,6 +3258,7 @@
                     "timing_scope": "segment"
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -3208,7 +3287,7 @@
           "rationale": "Protected warning is unchanged.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3229,6 +3308,7 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 47,
@@ -3242,6 +3322,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WARNING.MATCH",
                 "status": "SATISFIED"
               },
@@ -3264,6 +3345,7 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 47,
@@ -3277,6 +3359,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -3305,7 +3388,7 @@
           "rationale": "Equivalent unit spelling within the same numeric template.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3326,6 +3409,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -3339,6 +3423,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -3361,6 +3446,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -3374,6 +3460,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -3402,7 +3489,7 @@
           "rationale": "En dash expresses the same two endpoints in the supported grammar.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3423,6 +3510,7 @@
                 "instruction_ids": [
                   "pressure"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 31,
@@ -3436,6 +3524,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -3458,6 +3547,7 @@
                 "instruction_ids": [
                   "pressure"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 31,
@@ -3471,6 +3561,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -3499,7 +3590,7 @@
           "rationale": "Explicit approved maintain-temperature wording.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3520,6 +3611,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 39,
@@ -3533,6 +3625,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.MATCH",
                 "status": "SATISFIED"
               },
@@ -3555,6 +3648,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 39,
@@ -3568,6 +3662,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -3596,7 +3691,7 @@
           "rationale": "Exactly the configured ASR confidence threshold is sufficient under this synthetic policy.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3617,6 +3712,7 @@
                 "instruction_ids": [
                   "valve"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 22,
@@ -3630,6 +3726,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -3652,6 +3749,7 @@
                 "instruction_ids": [
                   "valve"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 22,
@@ -3665,6 +3763,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -3693,7 +3792,7 @@
           "rationale": "Hundredth of a meter is exactly ten millimeters.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3714,6 +3813,7 @@
                 "instruction_ids": [
                   "clearance"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 24,
@@ -3727,6 +3827,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.EQUIVALENT",
                 "status": "SATISFIED"
               },
@@ -3749,6 +3850,7 @@
                 "instruction_ids": [
                   "clearance"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 24,
@@ -3762,6 +3864,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.NUMERIC_TRANSFORM",
                 "status": "SATISFIED"
               }
@@ -3790,7 +3893,7 @@
           "rationale": "Power on reverses the explicitly protected off state.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3811,6 +3914,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 20,
@@ -3824,6 +3928,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.REVERSED",
                 "status": "VIOLATION"
               }
@@ -3852,7 +3957,7 @@
           "rationale": "Reversal also applies to the explicitly approved turn template.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3873,6 +3978,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 18,
@@ -3886,6 +3992,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.REVERSED",
                 "status": "VIOLATION"
               }
@@ -3914,7 +4021,7 @@
           "rationale": "Open reverses the protected closed valve state.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3935,6 +4042,7 @@
                 "instruction_ids": [
                   "valve"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 20,
@@ -3948,6 +4056,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.REVERSED",
                 "status": "VIOLATION"
               }
@@ -3976,7 +4085,7 @@
           "rationale": "Removing not permits bypassing the interlock.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -3997,6 +4106,7 @@
                 "instruction_ids": [
                   "interlock"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 24,
@@ -4010,6 +4120,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.REVERSED",
                 "status": "VIOLATION"
               }
@@ -4038,7 +4149,7 @@
           "rationale": "Removing not now requires the guard to remain unlocked.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4059,6 +4170,7 @@
                 "instruction_ids": [
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 28,
@@ -4072,6 +4184,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.REVERSED",
                 "status": "VIOLATION"
               }
@@ -4100,7 +4213,7 @@
           "rationale": "Minimum wait has been halved.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4121,6 +4234,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 25,
@@ -4134,6 +4248,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4162,7 +4277,7 @@
           "rationale": "Sixty minutes is not sixty seconds, even if a longer wait seems conservative.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4183,6 +4298,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 25,
@@ -4196,6 +4312,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4224,7 +4341,7 @@
           "rationale": "A minimum wait was changed to a maximum wait.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4245,6 +4362,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 24,
@@ -4258,6 +4376,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4286,7 +4405,7 @@
           "rationale": "The allowed upper temperature was raised.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4307,6 +4426,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 35,
@@ -4320,6 +4440,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4348,7 +4469,7 @@
           "rationale": "Keeping the number while changing Celsius to Fahrenheit changes the limit.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4369,6 +4490,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 35,
@@ -4382,6 +4504,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4410,7 +4533,7 @@
           "rationale": "An upper bound was reversed into a lower bound.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4431,6 +4554,7 @@
                 "instruction_ids": [
                   "temperature"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 35,
@@ -4444,6 +4568,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4472,7 +4597,7 @@
           "rationale": "Upper pressure endpoint changed from four to five bar.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4493,6 +4618,7 @@
                 "instruction_ids": [
                   "pressure"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 34,
@@ -4506,6 +4632,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4534,7 +4661,7 @@
           "rationale": "Lower pressure endpoint changed.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4555,6 +4682,7 @@
                 "instruction_ids": [
                   "pressure"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 34,
@@ -4568,6 +4696,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4596,7 +4725,7 @@
           "rationale": "Pressure units changed without converting the values.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4617,6 +4746,7 @@
                 "instruction_ids": [
                   "pressure"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 34,
@@ -4630,6 +4760,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4658,7 +4789,7 @@
           "rationale": "Required bolt count was reduced.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4679,6 +4810,7 @@
                 "instruction_ids": [
                   "bolts"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 16,
@@ -4692,6 +4824,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4720,7 +4853,7 @@
           "rationale": "Ten centimeters is ten times the protected clearance.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4741,6 +4874,7 @@
                 "instruction_ids": [
                   "clearance"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 23,
@@ -4754,6 +4888,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4780,7 +4915,7 @@
           "rationale": "A protected warning is absent from a transcript explicitly declared complete.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4801,7 +4936,9 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [],
+                "provider": null,
                 "rule_id": "WARNING.MISSING",
                 "status": "VIOLATION"
               }
@@ -4830,7 +4967,7 @@
           "rationale": "Reviewer explicitly identified this energized-maintenance wording as dangerous.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4851,6 +4988,7 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 55,
@@ -4864,6 +5002,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WARNING.CHANGED",
                 "status": "VIOLATION"
               }
@@ -4896,7 +5035,7 @@
           "rationale": "Guard opening precedes isolation instead of following it.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -4917,6 +5056,7 @@
                 "instruction_ids": [
                   "disconnect"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 17,
@@ -4930,6 +5070,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -4952,6 +5093,7 @@
                 "instruction_ids": [
                   "close"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 23,
@@ -4965,6 +5107,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -4987,6 +5130,7 @@
                 "instruction_ids": [
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 15,
@@ -5000,6 +5144,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -5046,6 +5191,7 @@
                   "close",
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 17,
@@ -5081,6 +5227,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "SEQUENCE.REVERSED",
                 "status": "VIOLATION"
               }
@@ -5112,7 +5259,7 @@
           "rationale": "The protected valve closure step is omitted from complete evidence.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5133,6 +5280,7 @@
                 "instruction_ids": [
                   "disconnect"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 17,
@@ -5146,6 +5294,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -5168,6 +5317,7 @@
                 "instruction_ids": [
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 15,
@@ -5181,6 +5331,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               },
@@ -5203,7 +5354,9 @@
                 "instruction_ids": [
                   "close"
                 ],
+                "model_call_id": null,
                 "observed": [],
+                "provider": null,
                 "rule_id": "SEQUENCE.MISSING",
                 "status": "VIOLATION"
               },
@@ -5250,6 +5403,7 @@
                   "close",
                   "guard"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 17,
@@ -5274,6 +5428,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "SEQUENCE.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -5302,7 +5457,7 @@
           "rationale": "Losing the minus sign changes the negative temperature range.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5323,6 +5478,7 @@
                 "instruction_ids": [
                   "cold"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 39,
@@ -5336,6 +5492,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -5364,7 +5521,7 @@
           "rationale": "Manually labeled dangerous instruction to energize the power; outside the explicit reversal template, so conservative review is expected.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5385,6 +5542,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 39,
@@ -5398,6 +5556,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -5426,7 +5585,7 @@
           "rationale": "Manually labeled bypass permission despite a changed imperative template; engine must not clear it.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5447,6 +5606,7 @@
                 "instruction_ids": [
                   "interlock"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 37,
@@ -5460,6 +5620,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -5488,7 +5649,7 @@
           "rationale": "A length is replaced by a time unit within the same template.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5509,6 +5670,7 @@
                 "instruction_ids": [
                   "clearance"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 28,
@@ -5522,6 +5684,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.CHANGED",
                 "status": "VIOLATION"
               }
@@ -5550,7 +5713,7 @@
           "rationale": "Low confidence means the apparent off-to-on reversal is not reliable evidence.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5571,6 +5734,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 20,
@@ -5584,6 +5748,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "EVIDENCE.UNCERTAIN",
                 "status": "UNRESOLVED"
               }
@@ -5612,7 +5777,7 @@
           "rationale": "Unknown ASR confidence cannot support automatic clearance even for exact text.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5633,6 +5798,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -5646,6 +5812,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "EVIDENCE.UNCERTAIN",
                 "status": "UNRESOLVED"
               }
@@ -5674,7 +5841,7 @@
           "rationale": "Explicit inaudible marker covers the protected polarity word.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5695,6 +5862,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 29,
@@ -5708,6 +5876,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "EVIDENCE.UNCERTAIN",
                 "status": "UNRESOLVED"
               }
@@ -5734,14 +5903,16 @@
           "rationale": "An incomplete recording cannot establish warning omission.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [],
                 "constraint_id": null,
                 "explanation": "Transcript completeness has not been confirmed; omission checks cannot clear the narration.",
                 "instruction_ids": [],
+                "model_call_id": null,
                 "observed": [],
+                "provider": null,
                 "rule_id": "EVIDENCE.COMPLETENESS",
                 "status": "UNRESOLVED"
               },
@@ -5764,7 +5935,9 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [],
+                "provider": null,
                 "rule_id": "EVIDENCE.MISSING",
                 "status": "UNRESOLVED"
               }
@@ -5793,14 +5966,16 @@
           "rationale": "Completeness defaults to unknown even when a provided segment is exact.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [],
                 "constraint_id": null,
                 "explanation": "Transcript completeness has not been confirmed; omission checks cannot clear the narration.",
                 "instruction_ids": [],
+                "model_call_id": null,
                 "observed": [],
+                "provider": null,
                 "rule_id": "EVIDENCE.COMPLETENESS",
                 "status": "UNRESOLVED"
               },
@@ -5823,6 +5998,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -5836,6 +6012,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "POLARITY.MATCH",
                 "status": "SATISFIED"
               },
@@ -5858,6 +6035,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -5871,6 +6049,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.APPROVED",
                 "status": "SATISFIED"
               }
@@ -5899,13 +6078,14 @@
           "rationale": "Changed text without reviewed instruction mapping cannot be aligned by similarity alone.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [],
                 "constraint_id": null,
                 "explanation": "No unique exact/approved instruction match. Supply a reviewed instruction ID; similarity is not evidence of equivalence.",
                 "instruction_ids": [],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 20,
@@ -5919,6 +6099,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "EVIDENCE.ALIGNMENT",
                 "status": "UNRESOLVED"
               },
@@ -5941,7 +6122,9 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [],
+                "provider": null,
                 "rule_id": "EVIDENCE.MISSING",
                 "status": "UNRESOLVED"
               }
@@ -5970,7 +6153,7 @@
           "rationale": "Plausible off-state paraphrase is not explicitly approved and may be context-dependent.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -5991,6 +6174,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 32,
@@ -6004,6 +6188,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -6032,7 +6217,7 @@
           "rationale": "Empty numeric evidence cannot support a changed-quantity conclusion.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -6053,6 +6238,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 0,
@@ -6066,6 +6252,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "EVIDENCE.UNCERTAIN",
                 "status": "UNRESOLVED"
               }
@@ -6095,7 +6282,7 @@
           "rationale": "Repeated instruction segments require manual segmentation/repetition review.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -6116,6 +6303,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 21,
@@ -6140,6 +6328,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "EVIDENCE.DUPLICATE",
                 "status": "UNRESOLVED"
               }
@@ -6168,7 +6357,7 @@
           "rationale": "A numeral spoken as words is outside this numeric grammar and is not an approved variant.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -6189,6 +6378,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 28,
@@ -6202,6 +6392,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "NUMERIC.UNRESOLVED",
                 "status": "UNRESOLVED"
               },
@@ -6224,6 +6415,7 @@
                 "instruction_ids": [
                   "wait"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 28,
@@ -6237,6 +6429,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -6265,7 +6458,7 @@
           "rationale": "Changed warning language is not a known dangerous alternative and requires semantic review.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -6286,6 +6479,7 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 42,
@@ -6299,6 +6493,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WARNING.UNRESOLVED",
                 "status": "UNRESOLVED"
               },
@@ -6321,6 +6516,7 @@
                 "instruction_ids": [
                   "warning"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 42,
@@ -6334,6 +6530,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -6362,7 +6559,7 @@
           "rationale": "A human-marked uncertain word overrides high aggregate ASR confidence.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -6383,6 +6580,7 @@
                 "instruction_ids": [
                   "valve"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 22,
@@ -6396,6 +6594,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "EVIDENCE.UNCERTAIN",
                 "status": "UNRESOLVED"
               }
@@ -6426,7 +6625,7 @@
           "rationale": "Manually labeled dangerous instruction to energize the power; outside the explicit reversal template, so conservative review is expected.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -6447,6 +6646,7 @@
                 "instruction_ids": [
                   "power"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 39,
@@ -6460,6 +6660,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -6488,7 +6689,7 @@
           "rationale": "Manually labeled bypass permission despite a changed imperative template; engine must not clear it.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.1.0",
+            "engine_version": "0.2.0",
             "findings": [
               {
                 "approved": [
@@ -6509,6 +6710,7 @@
                 "instruction_ids": [
                   "interlock"
                 ],
+                "model_call_id": null,
                 "observed": [
                   {
                     "end_char": 37,
@@ -6522,6 +6724,7 @@
                     "timing_scope": null
                   }
                 ],
+                "provider": null,
                 "rule_id": "WORDING.UNRESOLVED",
                 "status": "UNRESOLVED"
               }
@@ -6684,8 +6887,15 @@
       "metrics": null,
       "reason": "Real inference is unavailable or was not requested. No mock/LLM/AMD performance result is claimed.",
       "status": "skipped"
+    },
+    "D_basic_llm": {
+      "cases": [],
+      "metrics": null,
+      "reason": "Basic LLM baseline requires explicit remote opt-in and real inference.",
+      "status": "skipped"
     }
   },
+  "remote_request_attempts": 0,
   "runtime": {
     "fastapi": "0.128.2",
     "pydantic": "2.11.7",
