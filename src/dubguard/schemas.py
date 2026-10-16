@@ -260,7 +260,7 @@ class ReviewResult(Model):
     script_revision: str
     policy_id: str
     policy_revision: str
-    engine_version: str = "0.3.0"
+    engine_version: str = "0.4.0"
     mode: Literal["deterministic", "hybrid"] = "deterministic"
     semantic: SemanticAssessment | None = None
     safety_notice: str = "Review aid only. PASS_CANDIDATE is not safety certification or release approval."
@@ -279,3 +279,27 @@ class EvaluationCase(Model):
     rationale: Text
     profile: Identifier
     transcript: Transcript
+
+
+class HumanTranscriptInput(Model):
+    expected_revision: int = Field(ge=0)
+    transcript: Transcript
+    listened_to_original: Literal[True]
+    reason: Text
+
+
+class VerifiedTranscriptEvidence(Model):
+    transcript: Transcript
+    audio_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    raw_transcription_record_id: str
+    previous_evidence_record_id: str | None = None
+    reviewer_id: Text
+    reason: Text
+    listened_to_original: Literal[True]
+    created_at: str
+
+    @model_validator(mode="after")
+    def human_source(self):
+        if self.transcript.source != "manual":
+            raise ValueError("human evidence must use manual source")
+        return self

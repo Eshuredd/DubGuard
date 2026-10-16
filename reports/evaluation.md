@@ -9,7 +9,7 @@ Local paths are reproducible development results. Remote paths, if measured, use
 | Path | Count | Recall | Precision | Acceptable false-alert rate | Unresolved rate | Errors | Unsafe passes |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | A_normalized_diff | 60 | 100.00% | 53.33% | 66.67% | 11.67% | 21 | 0 |
-| B_policy_engine | 60 | 91.67% | 100.00% | 0.00% | 23.33% | 2 | 0 |
+| B_policy_engine | 60 | 91.67% | 100.00% | 0.00% | 26.67% | 4 | 0 |
 | D_basic_llm (skipped) | — | — | — | — | — | — | — |
 | E_policy_llm (skipped) | — | — | — | — | — | — | — |
 | C_hybrid (skipped) | — | — | — | — | — | — | — |
@@ -140,9 +140,9 @@ Label counts: {"ACCEPTABLE": 24, "CRITICAL": 24, "UNRESOLVED": 12}.
 | Category | Cases | Errors | Critical misses | False critical alerts | Unsafe passes |
 |---|---:|---:|---:|---:|---:|
 | alignment | 2 | 0 | 0 | 0 | 0 |
-| asr | 5 | 0 | 0 | 0 | 0 |
+| asr | 5 | 1 | 0 | 0 | 0 |
 | changed-unit | 5 | 0 | 0 | 0 | 0 |
-| hard-negative | 6 | 0 | 0 | 0 | 0 |
+| hard-negative | 6 | 1 | 0 | 0 | 0 |
 | missing-evidence | 3 | 0 | 0 | 0 | 0 |
 | negation | 3 | 0 | 0 | 0 | 0 |
 | numeric-ambiguity | 1 | 0 | 0 | 0 | 0 |
@@ -159,6 +159,14 @@ Label counts: {"ACCEPTABLE": 24, "CRITICAL": 24, "UNRESOLVED": 12}.
 
 ### Failure examples (all decision mismatches)
 
+- **A18** (asr): expected PASS_CANDIDATE; observed REVIEW_REQUIRED.
+  Approved: ["Switch the power off."].
+  Observed: ["Switch the power off."].
+  Label rationale: Complete exact ASR evidence exceeds the configured confidence threshold and supplies segment times.
+- **A23** (hard-negative): expected PASS_CANDIDATE; observed REVIEW_REQUIRED.
+  Approved: ["Keep the valve closed."].
+  Observed: ["Keep the valve closed."].
+  Label rationale: Exactly the configured ASR confidence threshold is sufficient under this synthetic policy.
 - **C22** (semantic-challenge): expected CRITICAL_DEVIATION; observed REVIEW_REQUIRED.
   Approved: ["Switch the power off."].
   Observed: ["Go ahead and energize the power supply."].

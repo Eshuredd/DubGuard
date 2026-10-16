@@ -1,6 +1,6 @@
 # DubGuard — Industrial Narration Review
 
-Phases 1, 2A, 2A.1 and a Phase 2B backend foundation for AMD Developer Hackathon
+Phases 1, 2A, 2A.1, 2B and Phase 2C evidence integrity for AMD Developer Hackathon
 Act III, **Intelligent Industry**. The deterministic engine compares approved
 English single-speaker narration under reviewer-defined constraints; optional
 local audio transcription and a versioned human review API now surround it.
@@ -131,10 +131,11 @@ Evidence spans are exact source substrings with character offsets; findings show
 the complete approved/observed instruction spans for context. Omitted evidence
 has an empty observed list and **no invented timestamp**.
 
-ASR requires supplied confidence at or above the policy threshold. Missing/low
-confidence, empty text, explicit unknown markers, or `uncertain=true` produce
-`UNRESOLVED`, including when the remaining words look exact. Confidence is
-unvalidated input metadata, not proof of transcription accuracy. Explicit complete
+Raw ASR always remains provisional, even with high confidence or recognizer agreement.
+It can produce `ASR.SUSPECTED.*` rule findings with status `UNRESOLVED`, using
+tentative mappings solely to discover candidates. Confirming alignment does not
+verify spoken text. Empty text, unknown markers and uncertain segments remain
+unresolved. Authenticated human transcript evidence is a separate versioned record. Explicit complete
 coverage is necessary to conclude an omission; incomplete/unknown coverage or
 unaligned/uncertain segments prevent a definitive omission claim. A definite
 independent violation can still be reported alongside unresolved evidence.
@@ -187,13 +188,16 @@ set, not a held-out benchmark.
 | Path | Critical recall | Precision | False-alert rate on acceptable | Unresolved rate |
 |---|---:|---:|---:|---:|
 | A: normalized text-difference baseline | 24/24 = 100% | 24/45 = 53.33% | 16/24 = 66.67% | 7/60 = 11.67% |
-| B: deterministic policy engine | 22/24 = 91.67% | 22/22 = 100% | 0/24 = 0% | 14/60 = 23.33% |
+| B: deterministic policy engine | 22/24 = 91.67% | 22/22 = 100% | 0/24 = 0% | 16/60 = 26.67% |
 | D: basic LLM and C: policy + real semantic provider | Skipped in the local report | — | — | — |
 
 Both measured paths have zero unsafe passes **on this set**. B escalates C22 and
 C23 to review instead of calling them critical; both count as recall misses.
 Their dangerous meaning falls outside the explicitly declared templates. All 12
-ambiguous cases remain review-required. All 24 acceptable cases pass B.
+ambiguous cases remain review-required. B passes 22/24 acceptable cases; A18 and
+A23 now require human review because they are raw ASR, despite high supplied
+confidence. Labels were not changed to improve measured results. Acceptable
+escalation is 2/24 = 8.33%; confirmed false-alert rate remains 0%.
 
 Path A has only normalization and the same completeness/evidence-quality gate;
 it treats any text difference as critical and ignores policy variants, unit
@@ -328,19 +332,35 @@ The review API sequence is:
    Poll `GET /review/workflows/{id}` for the transcription and its coverage.
 4. `POST /review/workflows/{id}/alignments/propose` gives tentative mappings.
    `POST /review/workflows/{id}/alignments/confirm` takes a map of segment IDs to
-   instruction IDs and a reason; only confirmed IDs enter verification.
+   instruction IDs and a reason. Confirmation does not clear ASR uncertainty.
+   Tentative IDs can support suspected findings only.
 5. `POST /review/workflows/{id}/verify` runs deterministic verification. Add
    `?mode=hybrid` to queue AMD semantic analysis. If a separate local model is
    installed, set `DUBGUARD_SECONDARY_WHISPER_MODEL` and call
    `POST /review/workflows/{id}/acoustic-recheck` to independently re-transcribe
    protected regions without supplying approved words.
-6. `POST /review/workflows/{id}/findings/{index}/decision` records one of
+6. Listen to the entire original audio, then `POST /review/workflows/{id}/transcript-evidence`
+   with `expected_revision` from the workflow, `listened_to_original: true`, a
+   reason, and a `transcript` with source `manual`, completeness and actual spoken
+   segments. Enter the words heard, including errors; do not rewrite narration to
+   match the script. Unclear speech stays uncertain. This creates an immutable
+   correction linked to audio SHA-256, raw transcription and the preceding human
+   evidence version. Re-run verification. Raw ASR and all corrections remain in
+   authenticated workflow `record_history`.
+7. `POST /review/workflows/{id}/findings/{index}/decision` records one of
    `ACCEPTED_AS_CORRECT`, `CORRECTION_REQUIRED`, `RERECORD_REQUIRED`, or
-   `ESCALATED` with a reason. Once every current finding has an explicit accepted
-   decision, the workflow reaches `READY_FOR_SIGNOFF`.
-7. `POST /review/workflows/{id}/signoff` with `APPROVED` or `REJECTED` and a reason
-   records an explicit human decision bound to exact script/policy revisions and
-   audio SHA-256. Approval also requires complete processing coverage. Creating a
+   `ESCALATED` with a reason and the exact `verification_record_id`. Acceptance
+   applies only to SATISFIED findings. Confirmed violations and unresolved checks
+   block approval; correct the evidence or re-record using a superseding workflow.
+8. `POST /review/workflows/{id}/signoff` with `APPROVED` or `REJECTED` and a reason
+   and `verification_record_id` records an explicit human decision bound to exact
+   script/policy records and revisions, audio SHA-256, human evidence record and
+   verification run. All findings must be SATISFIED and explicitly reviewed.
+   A zero-findings run can go directly to this explicit signoff, but still needs
+   human-verified complete evidence and complete processing coverage. Coverage
+   alone never proves transcription accuracy. Input changes invalidate runs and
+   prior finding decisions; concurrent/repeated signoffs cannot reuse readiness.
+   Creating a
    new workflow with `supersedes` retains earlier history and marks old approvals
    superseded.
 
@@ -424,3 +444,57 @@ independently of Docker.
 No commit or push was performed in this Phase 2 run. Test output
 may include one upstream Starlette/AnyIO deprecation warning; it does not fail
 the suite.
+
+
+## Phase 2C operation and validation
+
+The SQLite migration adds evidence revisions and verification input snapshots;
+it preserves legacy records and marks old approvals without bound evidence as
+`LEGACY_UNVERIFIED`. Finalized workflows cannot be edited. A new recording or
+policy uses a new workflow with `supersedes` to invalidate prior approvals while
+retaining history. There is no critical-violation exception endpoint: actual
+spoken deviations require correction/re-recording. Input mutations and job starts
+invalidate current verification. Job results use revision checks; stale completion
+cannot restore approval readiness. Approval validation and writes use one SQLite
+write transaction. Authentication covers every `/review` action. Direct `/verify`
+and CLI outputs remain advisory and cannot create human approvals.
+
+```sh
+.venv/bin/python -m pytest -q
+.venv/bin/python -m uvicorn dubguard.api:app --host 127.0.0.1 --port 8000
+.venv/bin/python -m dubguard evaluate --output reports
+```
+
+See [RECORDING_GUIDE.md](RECORDING_GUIDE.md) for six actual-speech recording tasks
+and a deliberately incomplete manifest. No real human-audio metrics are claimed.
+Regression tests use stub ASR and silent PCM to exercise the full review protocol.
+
+AMD semantic generation now has `AMD_TOKEN_FACTORY_MAX_OUTPUT_TOKENS` (default
+1024, range 64–4096), separate connect timeout (default 5 seconds), and read/write
+timeout (existing default 40 seconds). Retries remain bounded at the existing
+configured count; the smoke commands below force zero retries and semantic output
+512 tokens. Connect/read/write/pool timeouts are distinguished without logging
+credentials or exception bodies. Read timeout alone cannot distinguish server
+queue/generation time from network delay. The prior 21.84-second success and
+40.80-second generic failure are historical measurements, not new Phase 2C calls.
+
+Prepare without making a request:
+
+```sh
+.venv/bin/python -m dubguard.smoke semantic examples/critical.json
+.venv/bin/python -m dubguard.smoke audio /absolute/path/to/on-off.wav
+```
+
+Only after authorization, add `--execute --output reports/amd_semantic_phase2c.json`
+or `--execute --output reports/amd_audio_phase2c.json` to the respective command.
+Each permits at most one HTTP attempt. DeepSeek remains the configured semantic
+model; MiMo remains separate. MiMo accepts a real PCM WAV up to 30 seconds / 5 MB
+(local limits), with documented base64 `input_audio`; it does not supply validated
+timestamps or ground truth. No remote benchmark or smoke call ran in Phase 2C.
+
+Before frontend work, collect/adjudicate these six recordings and authorize the
+bounded remote probes. Then build a review-only interface showing raw ASR,
+tentative alignment, human correction history, exact source audio, unresolved
+checks, and run-bound signoff. Production still needs durable jobs, stronger
+identity/roles and tamper-resistant audit storage. Acoustic disagreements remain
+blocking; this version has no per-disagreement human resolution endpoint.

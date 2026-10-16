@@ -10,7 +10,7 @@ import wave
 import httpx
 from pydantic import Field
 
-from .providers import _load_project_env
+from .providers import _load_project_env, _bounded_int, _bounded_float
 from .schemas import Model
 
 
@@ -61,20 +61,23 @@ class MiMoAudioProbe:
                                                      "format": "wav"}},
             {"type": "text", "text": "Transcribe the English speech verbatim. Return only the words heard. If unintelligible, say UNINTELLIGIBLE. Do not infer from a script."},
         ]}]}
+        retries = _bounded_int("AMD_TOKEN_FACTORY_AUDIO_MAX_RETRIES", 0, 0, 1)
+        timeout = _bounded_float("AMD_TOKEN_FACTORY_AUDIO_TIMEOUT_SECONDS", 45.0, 2.0, 120.0)
+        timeout_config = httpx.Timeout(timeout, connect=5.0)
         began = time.perf_counter()
         own_client = self.client is None
-        client = self.client or httpx.Client(timeout=httpx.Timeout(45.0, connect=5.0))
+        client = self.client or httpx.Client(timeout=timeout_config)
         try:
-            for attempt in range(2):
+            for attempt in range(retries + 1):
                 try:
                     response = client.post(target, headers={"Authorization": f"Bearer {key}"},
-                                           json=payload, timeout=45.0)
+                                           json=payload, timeout=timeout_config)
                 except (httpx.TimeoutException, httpx.TransportError):
-                    if attempt == 0:
+                    if attempt < retries:
                         time.sleep(0.5)
                         continue
                     break
-                if response.status_code in {429, 500, 502, 503, 504} and attempt == 0:
+                if response.status_code in {429, 500, 502, 503, 504} and attempt < retries:
                     time.sleep(0.5)
                     continue
                 if response.status_code != 200 or len(response.content) > 100_000:
@@ -83,7 +86,7 @@ class MiMoAudioProbe:
                     body = response.json()
                     call_id = body["id"]
                     text = body["choices"][0]["message"]["content"]
-                    if not isinstance(call_id, str) or not call_id or not isinstance(text, str) or not text.strip():
+                    if not isinstance(call_id, str) or not call_id or not isinstance(text, str) or not text.strip() or body["choices"][0].get("finish_reason") == "length":
                         break
                     return AudioProbeResult(status="real_response", model=body.get("model") or model,
                                             call_id=call_id, text=text.strip(),

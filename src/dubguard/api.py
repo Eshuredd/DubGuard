@@ -10,7 +10,7 @@ from .evaluation import evaluate, markdown_report
 from .schemas import ReviewResult, ScriptPolicy, VerificationRequest
 from .review import router as review_router
 
-app = FastAPI(title="DubGuard — Industrial Narration Review", version="0.3.0",
+app = FastAPI(title="DubGuard — Industrial Narration Review", version="0.4.0",
               description="English single-speaker text review. PASS_CANDIDATE is not safety certification or release approval.")
 app.include_router(review_router)
 

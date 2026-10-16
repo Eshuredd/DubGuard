@@ -1,0 +1,273 @@
+{
+  "schema_version": "1",
+  "cases": [
+    {
+      "id": "correct",
+      "category": "correct",
+      "split": "development",
+      "audio_path": "/REPLACE_WITH_RECORDING_DIRECTORY/correct.wav",
+      "audio_sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "human_verified_by": "",
+      "adjudication_note": "",
+      "spoken_ground_truth": [],
+      "protected_terms": [
+        "off",
+        "on"
+      ],
+      "label": "UNRESOLVED",
+      "policy": {
+        "script": {
+          "id": "correct",
+          "revision": "1",
+          "instructions": [
+            {
+              "id": "step-1",
+              "text": "Switch the power off.",
+              "approved_variants": []
+            }
+          ]
+        },
+        "policy": {
+          "id": "correct-policy",
+          "revision": "1",
+          "approved_by": "REPLACE_WITH_POLICY_REVIEWER",
+          "constraints": [
+            {
+              "kind": "polarity",
+              "approved_phrase": "off",
+              "reversed_phrase": "on",
+              "id": "protected-1",
+              "instruction_id": "step-1"
+            }
+          ]
+        }
+      },
+      "confirmed_asr_alignment": {},
+      "human_corrected_transcript": null
+    },
+    {
+      "id": "fifteen-fifty",
+      "category": "numeric",
+      "split": "development",
+      "audio_path": "/REPLACE_WITH_RECORDING_DIRECTORY/fifteen-fifty.wav",
+      "audio_sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "human_verified_by": "",
+      "adjudication_note": "",
+      "spoken_ground_truth": [],
+      "protected_terms": [
+        "15",
+        "50"
+      ],
+      "label": "UNRESOLVED",
+      "policy": {
+        "script": {
+          "id": "fifteen-fifty",
+          "revision": "1",
+          "instructions": [
+            {
+              "id": "step-1",
+              "text": "Wait 15 minutes before restarting.",
+              "approved_variants": []
+            }
+          ]
+        },
+        "policy": {
+          "id": "fifteen-fifty-policy",
+          "revision": "1",
+          "approved_by": "REPLACE_WITH_POLICY_REVIEWER",
+          "constraints": [
+            {
+              "kind": "numeric",
+              "id": "protected-1",
+              "instruction_id": "step-1"
+            }
+          ]
+        }
+      },
+      "confirmed_asr_alignment": {},
+      "human_corrected_transcript": null
+    },
+    {
+      "id": "on-off",
+      "category": "polarity",
+      "split": "development",
+      "audio_path": "/REPLACE_WITH_RECORDING_DIRECTORY/on-off.wav",
+      "audio_sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "human_verified_by": "",
+      "adjudication_note": "",
+      "spoken_ground_truth": [],
+      "protected_terms": [
+        "off",
+        "on"
+      ],
+      "label": "UNRESOLVED",
+      "policy": {
+        "script": {
+          "id": "on-off",
+          "revision": "1",
+          "instructions": [
+            {
+              "id": "step-1",
+              "text": "Switch the power off.",
+              "approved_variants": []
+            }
+          ]
+        },
+        "policy": {
+          "id": "on-off-policy",
+          "revision": "1",
+          "approved_by": "REPLACE_WITH_POLICY_REVIEWER",
+          "constraints": [
+            {
+              "kind": "polarity",
+              "approved_phrase": "off",
+              "reversed_phrase": "on",
+              "id": "protected-1",
+              "instruction_id": "step-1"
+            }
+          ]
+        }
+      },
+      "confirmed_asr_alignment": {},
+      "human_corrected_transcript": null
+    },
+    {
+      "id": "before-after",
+      "category": "order",
+      "split": "development",
+      "audio_path": "/REPLACE_WITH_RECORDING_DIRECTORY/before-after.wav",
+      "audio_sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "human_verified_by": "",
+      "adjudication_note": "",
+      "spoken_ground_truth": [],
+      "protected_terms": [
+        "before",
+        "after"
+      ],
+      "label": "UNRESOLVED",
+      "policy": {
+        "script": {
+          "id": "before-after",
+          "revision": "1",
+          "instructions": [
+            {
+              "id": "step-1",
+              "text": "Close the valve before starting the pump.",
+              "approved_variants": []
+            }
+          ]
+        },
+        "policy": {
+          "id": "before-after-policy",
+          "revision": "1",
+          "approved_by": "REPLACE_WITH_POLICY_REVIEWER",
+          "constraints": [
+            {
+              "kind": "polarity",
+              "approved_phrase": "before",
+              "reversed_phrase": "after",
+              "id": "protected-1",
+              "instruction_id": "step-1"
+            }
+          ]
+        }
+      },
+      "confirmed_asr_alignment": {},
+      "human_corrected_transcript": null
+    },
+    {
+      "id": "paraphrase",
+      "category": "paraphrase",
+      "split": "development",
+      "audio_path": "/REPLACE_WITH_RECORDING_DIRECTORY/paraphrase.wav",
+      "audio_sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "human_verified_by": "",
+      "adjudication_note": "",
+      "spoken_ground_truth": [],
+      "protected_terms": [
+        "off",
+        "on"
+      ],
+      "label": "UNRESOLVED",
+      "policy": {
+        "script": {
+          "id": "paraphrase",
+          "revision": "1",
+          "instructions": [
+            {
+              "id": "step-1",
+              "text": "Switch the power off.",
+              "approved_variants": [
+                {
+                  "text": "Turn the power off.",
+                  "approved_by": "REPLACE_WITH_POLICY_REVIEWER",
+                  "reason": "Explicitly permitted wording for this recording exercise."
+                }
+              ]
+            }
+          ]
+        },
+        "policy": {
+          "id": "paraphrase-policy",
+          "revision": "1",
+          "approved_by": "REPLACE_WITH_POLICY_REVIEWER",
+          "constraints": [
+            {
+              "kind": "polarity",
+              "approved_phrase": "off",
+              "reversed_phrase": "on",
+              "id": "protected-1",
+              "instruction_id": "step-1"
+            }
+          ]
+        }
+      },
+      "confirmed_asr_alignment": {},
+      "human_corrected_transcript": null
+    },
+    {
+      "id": "unclear",
+      "category": "uncertainty",
+      "split": "development",
+      "audio_path": "/REPLACE_WITH_RECORDING_DIRECTORY/unclear.wav",
+      "audio_sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "human_verified_by": "",
+      "adjudication_note": "",
+      "spoken_ground_truth": [],
+      "protected_terms": [
+        "off",
+        "on"
+      ],
+      "label": "UNRESOLVED",
+      "policy": {
+        "script": {
+          "id": "unclear",
+          "revision": "1",
+          "instructions": [
+            {
+              "id": "step-1",
+              "text": "Switch the power off.",
+              "approved_variants": []
+            }
+          ]
+        },
+        "policy": {
+          "id": "unclear-policy",
+          "revision": "1",
+          "approved_by": "REPLACE_WITH_POLICY_REVIEWER",
+          "constraints": [
+            {
+              "kind": "polarity",
+              "approved_phrase": "off",
+              "reversed_phrase": "on",
+              "id": "protected-1",
+              "instruction_id": "step-1"
+            }
+          ]
+        }
+      },
+      "confirmed_asr_alignment": {},
+      "human_corrected_transcript": null
+    }
+  ]
+}

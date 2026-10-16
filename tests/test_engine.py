@@ -10,7 +10,9 @@ PROFILES, CASES, _ = load_dataset()
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.id)
 def test_explicit_synthetic_corpus(case):
     result = verify(request_for(case, PROFILES))
-    if case.label == "ACCEPTABLE":
+    if case.label == "ACCEPTABLE" and case.transcript.source == "asr":
+        assert result.decision == "REVIEW_REQUIRED"
+    elif case.label == "ACCEPTABLE":
         assert result.decision == "PASS_CANDIDATE"
     elif case.label == "UNRESOLVED" or case.id in {"C22", "C23"}:
         assert result.decision == "REVIEW_REQUIRED"

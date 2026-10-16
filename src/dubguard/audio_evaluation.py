@@ -14,7 +14,7 @@ from .alignment import apply_confirmed_alignment, propose_alignment
 from .audio import AudioStore, FasterWhisperProvider, transcribe_artifact
 from .engine import verify
 from .evaluation import calculate_metrics
-from .schemas import (EvaluationLabel, Model, ScriptPolicy, VerificationRequest)
+from .schemas import (EvaluationLabel, Model, ScriptPolicy, VerificationRequest, Transcript)
 from .text import normalize
 
 
@@ -46,6 +46,7 @@ class RecordedCase(Model):
     label: EvaluationLabel
     policy: ScriptPolicy
     confirmed_asr_alignment: dict[str, str] = Field(default_factory=dict)
+    human_corrected_transcript: Transcript | None = None
 
 
 class RecordedManifest(Model):
@@ -92,6 +93,23 @@ def evaluate_recorded_audio(manifest_path: Path, *, model_path: str,
             if sha256(audio_bytes).hexdigest() != case.audio_sha256:
                 raise ValueError(f"Audio hash mismatch for {case.id}")
             artifact = store.ingest(audio_bytes)
+            known = {i.id for i in case.policy.script.instructions}
+            for span in case.spoken_ground_truth:
+                if span.instruction_id is not None and span.instruction_id not in known:
+                    raise ValueError(f"Unknown ground truth instruction in {case.id}")
+                if span.end_seconds is not None and span.end_seconds > artifact.duration_seconds:
+                    raise ValueError(f"Ground truth timestamp exceeds audio in {case.id}")
+            corrected_result = None
+            if case.human_corrected_transcript is not None:
+                corrected = case.human_corrected_transcript
+                if corrected.source != "manual":
+                    raise ValueError("Corrected evidence must be manually reviewed")
+                for span in corrected.segments:
+                    if span.instruction_id is not None and span.instruction_id not in known:
+                        raise ValueError("Unknown corrected instruction")
+                    if span.end_seconds is not None and span.end_seconds > artifact.duration_seconds:
+                        raise ValueError("Corrected timestamp exceeds original audio")
+                corrected_result = verify(VerificationRequest(**case.policy.model_dump(mode="json"), transcript=corrected))
             result = transcribe_artifact(store, artifact, primary)
             transcript = (apply_confirmed_alignment(result.transcript, case.confirmed_asr_alignment,
                                                     case.policy.script) if case.confirmed_asr_alignment
@@ -120,6 +138,18 @@ def evaluate_recorded_audio(manifest_path: Path, *, model_path: str,
                          "audio_sha256": artifact.sha256, "human_verified_by": case.human_verified_by,
                          "adjudication_note": case.adjudication_note,
                          "ground_truth_text": truth_text, "asr_text": observed_text,
+                         "raw_transcript": result.transcript.model_dump(mode="json"),
+                         "timestamp_validity": all(s.start_seconds is not None and
+                             0 <= s.start_seconds <= s.end_seconds <= artifact.duration_seconds
+                             for s in result.transcript.segments) if result.transcript.segments else None,
+                         "coverage": result.coverage.model_dump(mode="json"),
+                         "suspected_violations": [f.model_dump(mode="json") for f in decision.findings
+                                                  if f.rule_id.startswith("ASR.SUSPECTED.")],
+                         "human_corrected_evidence": case.human_corrected_transcript.model_dump(mode="json")
+                             if case.human_corrected_transcript else None,
+                         "human_evidence_verification": corrected_result.model_dump(mode="json") if corrected_result else None,
+                         "final_verification_decision": (corrected_result or decision).decision.value,
+                         "release_approval": "not_performed_by_evaluation",
                          "reference_words": len(truth_tokens),
                          "word_errors": _word_errors(truth_tokens, observed_tokens),
                          "protected_terms": case.protected_terms,

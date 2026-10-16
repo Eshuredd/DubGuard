@@ -275,10 +275,10 @@
           "unsafe_passes": 0
         },
         "B_policy_engine": {
-          "acceptable_escalation_rate": 0.0,
+          "acceptable_escalation_rate": 0.111111,
           "critical_deviation_precision": null,
           "critical_deviation_recall": 0.0,
-          "decision_errors": 2,
+          "decision_errors": 3,
           "false_alert_count_on_acceptable": 0,
           "false_alert_rate_on_acceptable": 0.0,
           "false_negatives": 2,
@@ -292,7 +292,7 @@
             "hard-negative": {
               "count": 6,
               "critical_misses": 0,
-              "errors": 0,
+              "errors": 1,
               "false_critical_alerts": 0,
               "unsafe_passes": 0
             },
@@ -313,8 +313,8 @@
           },
           "total": 12,
           "true_positives": 0,
-          "unresolved_count": 3,
-          "unresolved_rate": 0.25,
+          "unresolved_count": 4,
+          "unresolved_rate": 0.333333,
           "unsafe_passes": 0
         }
       },

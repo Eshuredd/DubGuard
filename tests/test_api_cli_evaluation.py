@@ -85,7 +85,7 @@ def test_report_counts_and_honest_failures():
     assert m["label_counts"] == {"ACCEPTABLE":24,"CRITICAL":24,"UNRESOLVED":12}
     assert m["true_positives"] == 22
     assert m["false_negatives"] == 2
-    assert {r["id"] for r in report["paths"]["B_policy_engine"]["failures"]} == {"C22","C23"}
+    assert {r["id"] for r in report["paths"]["B_policy_engine"]["failures"]} == {"C22","C23","A18","A23"}
     assert m["unsafe_passes"] == 0
 
 

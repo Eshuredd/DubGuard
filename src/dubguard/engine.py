@@ -36,7 +36,7 @@ def uncertainty(segment: TranscriptSegment, request: VerificationRequest) -> str
     return None
 
 
-def verify(request: VerificationRequest, *, hybrid: bool = False,
+def _verify_rules(request: VerificationRequest, *, hybrid: bool = False,
            provider: SemanticProvider | None = None) -> ReviewResult:
     instructions = {i.id: i for i in request.script.instructions}
     findings: list[Finding] = []
@@ -224,3 +224,40 @@ def verify(request: VerificationRequest, *, hybrid: bool = False,
     return ReviewResult(decision=decision, findings=findings, script_id=request.script.id,
                         script_revision=request.script.revision, policy_id=request.policy.id,
                         policy_revision=request.policy.revision, mode="hybrid" if hybrid else "deterministic", semantic=semantic)
+
+
+def verify(request: VerificationRequest, *, hybrid: bool = False,
+           provider: SemanticProvider | None = None) -> ReviewResult:
+    """Raw ASR can alert, but only reviewed text can establish a violation."""
+    if request.transcript.source != "asr":
+        return _verify_rules(request, hybrid=hybrid, provider=provider)
+    from .alignment import propose_alignment
+    # These copies are solely inputs to candidate discovery. Neither is persisted
+    # as human evidence. Even high-confidence ASR remains provisional.
+    guarded = request.model_copy(deep=True)
+    for segment in guarded.transcript.segments:
+        segment.uncertain = True
+        segment.uncertainty_reason = "Raw ASR requires human verification of spoken content."
+    guarded.transcript.completeness = "unknown"
+    result = _verify_rules(guarded, hybrid=hybrid, provider=provider)
+    candidate = request.model_copy(deep=True)
+    candidate.transcript.source = "manual"
+    candidate.transcript.completeness = "unknown"  # never infer omissions from ASR
+    proposals = propose_alignment(request.script, request.transcript)
+    tentative = {p.segment_ids[0]: p.instruction_ids[0] for p in proposals.proposals
+                 if len(p.segment_ids) == len(p.instruction_ids) == 1}
+    for segment in candidate.transcript.segments:
+        segment.instruction_id = segment.instruction_id or tentative.get(segment.id)
+        segment.uncertain = False
+        segment.uncertainty_reason = None
+        segment.confidence = None
+    for finding in _verify_rules(candidate).findings:
+        if finding.status == Status.VIOLATION:
+            result.findings.append(finding.model_copy(update={
+                "rule_id": "ASR.SUSPECTED." + finding.rule_id,
+                "status": Status.UNRESOLVED,
+                "provider": "provisional-rule-check",
+                "explanation": "Suspected only: unverified ASR text and potentially tentative alignment. "
+                               + finding.explanation + " Listen to the original audio and verify actual spoken text."}))
+    result.decision = Decision.REVIEW_REQUIRED
+    return result

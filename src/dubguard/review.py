@@ -22,7 +22,7 @@ from .acoustic import TargetedRecheckResult, targeted_recheck
 from .engine import approved_evidence, observed_evidence, verify
 from .providers import _load_project_env
 from .schemas import (Decision, Finding, FindingStatus, Model, ReviewResult,
-                      ScriptPolicy, VerificationRequest)
+                      ScriptPolicy, VerificationRequest, HumanTranscriptInput, VerifiedTranscriptEvidence)
 
 router = APIRouter(prefix="/review", tags=["human-review"])
 
@@ -93,6 +93,19 @@ class ReviewStore:
               id TEXT PRIMARY KEY, workflow_id TEXT, event TEXT NOT NULL,
               reviewer_id TEXT NOT NULL, detail TEXT NOT NULL, created_at TEXT NOT NULL);
             """)
+            db.execute("BEGIN IMMEDIATE")  # executescript commits its preceding transaction
+            # Additive migration: preserve all legacy evidence and approval history.
+            for table, column, definition in (
+                ("workflows", "evidence_record_id", "TEXT"),
+                ("workflows", "revision", "INTEGER NOT NULL DEFAULT 0"),
+                ("approvals", "evidence_record_id", "TEXT"),
+                ("approvals", "verification_record_id", "TEXT"),
+                ("approvals", "input_snapshot", "TEXT"),
+            ):
+                if column not in {r["name"] for r in db.execute(f"PRAGMA table_info({table})")}:
+                    db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+            db.execute("CREATE TABLE IF NOT EXISTS verification_inputs (id TEXT PRIMARY KEY, snapshot TEXT NOT NULL)")
+            db.execute("UPDATE approvals SET status='LEGACY_UNVERIFIED' WHERE status='CURRENT' AND input_snapshot IS NULL")
 
     @contextmanager
     def _connect(self):
@@ -100,6 +113,7 @@ class ReviewStore:
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA foreign_keys=ON")
         try:
+            db.execute("BEGIN IMMEDIATE")
             yield db
             db.commit()
         except BaseException:
@@ -146,7 +160,7 @@ class ReviewStore:
                 db.execute("UPDATE approvals SET status='SUPERSEDED' WHERE workflow_id=? AND status='CURRENT'",
                            (supersedes,))
                 db.execute("UPDATE workflows SET state='SUPERSEDED' WHERE id=?", (supersedes,))
-            db.execute("INSERT INTO workflows VALUES (?,?,?,?,?,?,?,?,?,?,?)", (
+            db.execute("INSERT INTO workflows (id,policy_record_id,audio_record_id,transcription_record_id,alignment_record_id,confirmed_alignment_record_id,acoustic_record_id,verification_record_id,state,supersedes,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (
                 identity, policy_record_id, audio_record_id, None, None, None, None, None,
                 "DRAFT", supersedes, _now()))
         self.event(identity, "WORKFLOW_CREATED", reviewer_id, {
@@ -155,90 +169,168 @@ class ReviewStore:
             "audio_sha256": artifact["sha256"], "supersedes": supersedes})
         return identity
 
+    @staticmethod
+    def _snapshot(workflow: dict) -> dict:
+        return {key: workflow[key] for key in (
+            "policy_record_id", "audio_record_id", "transcription_record_id",
+            "alignment_record_id", "confirmed_alignment_record_id",
+            "acoustic_record_id", "evidence_record_id", "revision")}
+
+    @staticmethod
+    def _read(db, identity: str, kind: str) -> dict:
+        row = db.execute("SELECT payload FROM records WHERE id=? AND kind=?", (identity, kind)).fetchone()
+        if not row:
+            raise ValueError(f"Missing {kind} record")
+        return json.loads(row["payload"])
+
+    @staticmethod
+    def _active(db, identity: str) -> dict:
+        row = db.execute("SELECT * FROM workflows WHERE id=?", (identity,)).fetchone()
+        if not row or row["state"] in {"APPROVED", "REJECTED", "SUPERSEDED"}:
+            raise ValueError("workflow is unavailable or finalized; create a superseding workflow")
+        return dict(row)
+
     def set_record(self, workflow_id: str, field: str, record_id: str,
-                   state: str, reviewer_id: str) -> None:
-        if field not in {"transcription_record_id", "alignment_record_id",
-                         "confirmed_alignment_record_id", "acoustic_record_id",
-                         "verification_record_id"}:
+                   state: str, reviewer_id: str, expected_revision: int | None = None) -> None:
+        kinds = {"transcription_record_id": "transcription", "alignment_record_id": "alignment",
+                 "confirmed_alignment_record_id": "confirmed_alignment", "acoustic_record_id": "acoustic",
+                 "verification_record_id": "verification", "evidence_record_id": "verified_evidence"}
+        if field not in kinds:
             raise ValueError("invalid workflow record field")
         with self._connect() as db:
-            row = db.execute("SELECT state FROM workflows WHERE id=?", (workflow_id,)).fetchone()
-            if not row or row["state"] in {"APPROVED", "SUPERSEDED", "REJECTED"}:
-                raise ValueError("workflow is unavailable or finalized")
-            db.execute(f"UPDATE workflows SET {field}=?,state=? WHERE id=?", (record_id, state, workflow_id))
-        self.event(workflow_id, field.upper(), reviewer_id, {"record_id": record_id})
+            workflow = self._active(db, workflow_id)
+            if expected_revision is not None and workflow["revision"] != expected_revision:
+                raise ValueError("stale workflow revision; reload before retrying")
+            pending = {"TRANSCRIBING": "transcription_record_id", "VERIFYING": "verification_record_id",
+                       "ACOUSTIC_RECHECKING": "acoustic_record_id"}
+            if workflow["state"] in pending and field != pending[workflow["state"]]:
+                raise ValueError("processing job is pending; inputs cannot change until completion")
+            self._read(db, record_id, kinds[field])
+            if field == "verification_record_id":
+                db.execute("INSERT INTO verification_inputs VALUES (?,?)", (
+                    record_id, json.dumps(self._snapshot(workflow), sort_keys=True)))
+                db.execute("UPDATE workflows SET verification_record_id=?,state=? WHERE id=?",
+                           (record_id, state, workflow_id))
+            else:
+                # Every input mutation invalidates prior run decisions. Raw records remain immutable.
+                clear = ",verification_record_id=NULL"
+                if field == "transcription_record_id":
+                    clear += ",alignment_record_id=NULL,confirmed_alignment_record_id=NULL,acoustic_record_id=NULL,evidence_record_id=NULL"
+                if field == "confirmed_alignment_record_id":
+                    clear += ",acoustic_record_id=NULL"
+                db.execute(f"UPDATE workflows SET {field}=?,state=?,revision=revision+1{clear} WHERE id=?",
+                           (record_id, state, workflow_id))
+            db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?)", (
+                uuid4().hex, workflow_id, field.upper(), reviewer_id,
+                json.dumps({"record_id": record_id}), _now()))
 
     def mark_state(self, workflow_id: str, expected: set[str], state: str,
                    reviewer_id: str) -> None:
         with self._connect() as db:
-            row = db.execute("SELECT state FROM workflows WHERE id=?", (workflow_id,)).fetchone()
-            if not row or row["state"] not in expected:
+            workflow = self._active(db, workflow_id)
+            if workflow["state"] not in expected:
                 raise ValueError("workflow is not in a state eligible for this operation")
-            db.execute("UPDATE workflows SET state=? WHERE id=?", (state, workflow_id))
-        self.event(workflow_id, "STATE_CHANGED", reviewer_id, {"state": state})
+            # Starting a job invalidates readiness immediately, including when it fails.
+            db.execute("UPDATE workflows SET state=?,verification_record_id=NULL,revision=revision+1 WHERE id=?",
+                       (state, workflow_id))
+            db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?)", (
+                uuid4().hex, workflow_id, "STATE_CHANGED", reviewer_id, json.dumps({"state": state}), _now()))
+
+    def fail_job(self, workflow_id: str, expected_state: str, failed_state: str,
+                 reviewer_id: str, expected_revision: int) -> None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM workflows WHERE id=?", (workflow_id,)).fetchone()
+            if row and row["state"] == expected_state and row["revision"] == expected_revision:
+                db.execute("UPDATE workflows SET state=?,verification_record_id=NULL,revision=revision+1 WHERE id=?",
+                           (failed_state, workflow_id))
+            db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?)", (
+                uuid4().hex, workflow_id, failed_state, reviewer_id,
+                json.dumps({"job_input_revision": expected_revision, "note": "Failure never restores readiness"}), _now()))
+
+    def _checked_run(self, db, workflow: dict) -> ReviewResult:
+        if workflow["state"] not in {"IN_REVIEW", "READY_FOR_SIGNOFF"}:
+            raise ValueError("processing is incomplete or failed")
+        run = workflow["verification_record_id"]
+        row = db.execute("SELECT snapshot FROM verification_inputs WHERE id=?", (run,)).fetchone()
+        if not row or json.loads(row["snapshot"]) != self._snapshot(workflow):
+            raise ValueError("current verification of exact evidence is required")
+        return ReviewResult.model_validate(self._read(db, run, "verification"))
 
     def decide_finding(self, workflow_id: str, index: int, decision: str,
-                       reason: str, reviewer_id: str) -> str:
-        workflow = self.workflow(workflow_id)
-        if workflow["state"] in {"APPROVED", "SUPERSEDED", "REJECTED"}:
-            raise ValueError("workflow is finalized")
-        if not workflow["verification_record_id"]:
-            raise ValueError("verification is required first")
-        result = ReviewResult.model_validate(self.record(workflow["verification_record_id"], "verification"))
-        if not 0 <= index < len(result.findings):
-            raise ValueError("unknown finding index")
+                       reason: str, reviewer_id: str, expected_run: str | None = None) -> str:
         identity = uuid4().hex
         with self._connect() as db:
+            workflow = self._active(db, workflow_id)
+            result = self._checked_run(db, workflow)
+            if expected_run is not None and workflow["verification_record_id"] != expected_run:
+                raise ValueError("stale verification run")
+            if not 0 <= index < len(result.findings):
+                raise ValueError("unknown finding index")
+            if decision == "ACCEPTED_AS_CORRECT" and result.findings[index].status != FindingStatus.SATISFIED:
+                raise ValueError("unresolved or critical findings require corrected evidence or a new recording; ordinary acceptance cannot override them")
             db.execute("INSERT INTO finding_decisions VALUES (?,?,?,?,?,?,?,?)", (
                 identity, workflow_id, index, workflow["verification_record_id"],
                 decision, reason, reviewer_id, _now()))
-            rows = db.execute("SELECT finding_index, decision FROM finding_decisions WHERE workflow_id=? AND verification_record_id=? ORDER BY created_at,id",
-                              (workflow_id, workflow["verification_record_id"])).fetchall()
-            latest = {row["finding_index"]: row["decision"] for row in rows}
-            ready = all(latest.get(position) == "ACCEPTED_AS_CORRECT" for position in range(len(result.findings)))
-            db.execute("UPDATE workflows SET state=? WHERE id=?", (
-                "READY_FOR_SIGNOFF" if ready else "IN_REVIEW", workflow_id))
-        self.event(workflow_id, "FINDING_DECIDED", reviewer_id, {
-            "finding_index": index, "decision": decision, "reason": reason})
+            db.execute("UPDATE workflows SET state='IN_REVIEW' WHERE id=?", (workflow_id,))
+            db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?)", (
+                uuid4().hex, workflow_id, "FINDING_DECIDED", reviewer_id,
+                json.dumps({"index": index, "decision": decision, "reason": reason}), _now()))
         return identity
 
-    def signoff(self, workflow_id: str, decision: str, reason: str, reviewer_id: str) -> str:
-        workflow = self.workflow(workflow_id)
-        if workflow["state"] in {"APPROVED", "SUPERSEDED", "REJECTED"}:
-            raise ValueError("workflow is finalized")
-        if not workflow["verification_record_id"]:
-            raise ValueError("verification is required first")
-        result = ReviewResult.model_validate(self.record(workflow["verification_record_id"], "verification"))
-        if decision == "APPROVED":
-            if workflow["state"] != "READY_FOR_SIGNOFF":
-                raise ValueError("required findings are not ready for signoff")
-            with self._connect() as db:
-                rows = db.execute("SELECT finding_index, decision FROM finding_decisions WHERE workflow_id=? AND verification_record_id=? ORDER BY created_at,id",
-                                  (workflow_id, workflow["verification_record_id"])).fetchall()
-            latest = {row["finding_index"]: row["decision"] for row in rows}
-            if any(latest.get(index) != "ACCEPTED_AS_CORRECT" for index in range(len(result.findings))):
-                raise ValueError("all findings require an explicit accepting human decision before approval")
-            if not workflow["transcription_record_id"]:
-                raise ValueError("audio transcription record is required before approval")
-            transcription = TranscriptionResult.model_validate(self.record(
-                workflow["transcription_record_id"], "transcription"))
-            if not transcription.coverage.complete_processing:
-                raise ValueError("audio processing coverage is incomplete")
-        policy = ScriptPolicy.model_validate(self.record(workflow["policy_record_id"], "approved_policy"))
-        artifact = AudioArtifact.model_validate(self.record(workflow["audio_record_id"], "audio_artifact"))
-        path = AudioStore(_root() / "artifacts").path_for(artifact.sha256, artifact.format)
-        if not path.exists() or sha256(path.read_bytes()).hexdigest() != artifact.sha256:
-            raise ValueError("original audio is missing or changed")
-        identity = uuid4().hex
+    def signoff(self, workflow_id: str, decision: str, reason: str, reviewer_id: str, expected_run: str | None = None) -> str:
+        # One write transaction spans eligibility, input snapshot, and finalization.
+        # Repeated/concurrent signoffs serialize and observe the finalized state.
         with self._connect() as db:
-            db.execute("INSERT INTO approvals VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (
+            workflow = self._active(db, workflow_id)
+            result = self._checked_run(db, workflow)
+            if expected_run is not None and workflow["verification_record_id"] != expected_run:
+                raise ValueError("stale verification run")
+            if decision == "APPROVED":
+                if result.decision != Decision.PASS_CANDIDATE or any(
+                        f.status != FindingStatus.SATISFIED for f in result.findings):
+                    raise ValueError("critical or unresolved checks block approval; use corrective workflow")
+                evidence = VerifiedTranscriptEvidence.model_validate(self._read(
+                    db, workflow["evidence_record_id"], "verified_evidence"))
+                if evidence.raw_transcription_record_id != workflow["transcription_record_id"]:
+                    raise ValueError("human evidence refers to stale transcription")
+                if evidence.transcript.completeness != "complete" or not evidence.transcript.segments:
+                    raise ValueError("human verification of complete spoken content is required")
+                if any(s.uncertain or not s.text.strip() for s in evidence.transcript.segments):
+                    raise ValueError("human evidence still contains uncertainty")
+                transcription = TranscriptionResult.model_validate(self._read(
+                    db, workflow["transcription_record_id"], "transcription"))
+                if not transcription.coverage.complete_processing:
+                    raise ValueError("audio processing coverage is incomplete (not an accuracy metric)")
+                rows = db.execute("SELECT finding_index,decision FROM finding_decisions WHERE workflow_id=? AND verification_record_id=? ORDER BY created_at,id",
+                                  (workflow_id, workflow["verification_record_id"])).fetchall()
+                latest = {row["finding_index"]: row["decision"] for row in rows}
+                if any(latest.get(i) != "ACCEPTED_AS_CORRECT" for i in range(len(result.findings))):
+                    raise ValueError("all findings require explicit human review; zero findings may proceed directly to explicit signoff")
+            policy = ScriptPolicy.model_validate(self._read(db, workflow["policy_record_id"], "approved_policy"))
+            if decision == "APPROVED":
+                independent_check = verify(VerificationRequest(**policy.model_dump(mode="json"), transcript=evidence.transcript))
+                if independent_check.decision != Decision.PASS_CANDIDATE:
+                    raise ValueError("required deterministic checks on human evidence are not satisfied")
+            artifact = AudioArtifact.model_validate(self._read(db, workflow["audio_record_id"], "audio_artifact"))
+            path = AudioStore(_root() / "artifacts").path_for(artifact.sha256, artifact.format)
+            if not path.exists() or sha256(path.read_bytes()).hexdigest() != artifact.sha256:
+                raise ValueError("original audio is missing or changed")
+            if decision == "APPROVED" and (evidence.audio_sha256 != artifact.sha256 or transcription.artifact.sha256 != artifact.sha256):
+                raise ValueError("evidence is bound to different audio")
+            if (result.script_id, result.script_revision, result.policy_id, result.policy_revision) != (
+                    policy.script.id, policy.script.revision, policy.policy.id, policy.policy.revision):
+                raise ValueError("verification policy revisions differ")
+            identity = uuid4().hex
+            db.execute("INSERT INTO approvals VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
                 identity, workflow_id, decision, reviewer_id, reason,
                 policy.script.id, policy.script.revision, policy.policy.id,
-                policy.policy.revision, artifact.sha256, "CURRENT", _now()))
+                policy.policy.revision, artifact.sha256, "CURRENT", _now(),
+                workflow["evidence_record_id"], workflow["verification_record_id"],
+                json.dumps(self._snapshot(workflow), sort_keys=True)))
             db.execute("UPDATE workflows SET state=? WHERE id=?", (decision, workflow_id))
-        self.event(workflow_id, "FINAL_SIGNOFF", reviewer_id, {"decision": decision, "approval_id": identity,
-                    "audio_sha256": artifact.sha256, "script_revision": policy.script.revision,
-                    "policy_revision": policy.policy.revision})
+            db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?)", (
+                uuid4().hex, workflow_id, "FINAL_SIGNOFF", reviewer_id,
+                json.dumps({"approval_id": identity, "decision": decision}), _now()))
         return identity
 
     def details(self, identity: str) -> dict:
@@ -250,8 +342,16 @@ class ReviewStore:
                 "SELECT * FROM approvals WHERE workflow_id=? ORDER BY created_at,id", (identity,))]
             events = [dict(row) for row in db.execute(
                 "SELECT * FROM audit_events WHERE workflow_id=? ORDER BY created_at,id", (identity,))]
+            history = []
+            for event in events:
+                record_id = json.loads(event["detail"]).get("record_id")
+                if record_id:
+                    record = db.execute("SELECT * FROM records WHERE id=?", (record_id,)).fetchone()
+                    if record:
+                        history.append({"id": record["id"], "kind": record["kind"],
+                                        "payload": json.loads(record["payload"]), "created_at": record["created_at"]})
         return {"workflow": workflow, "finding_decisions": decisions,
-                "approvals": approvals, "audit_events": events}
+                "approvals": approvals, "audit_events": events, "record_history": history}
 
     def audit(self, *, workflow_id: str | None = None, limit: int = 100) -> list[dict]:
         with self._connect() as db:
@@ -271,11 +371,13 @@ class WorkflowCreate(Model):
 
 
 class FindingDecisionInput(Model):
+    verification_record_id: str
     decision: str = Field(pattern="^(ACCEPTED_AS_CORRECT|CORRECTION_REQUIRED|RERECORD_REQUIRED|ESCALATED)$")
     reason: str = Field(min_length=1, max_length=2000)
 
 
 class SignoffInput(Model):
+    verification_record_id: str
     decision: str = Field(pattern="^(APPROVED|REJECTED)$")
     reason: str = Field(min_length=1, max_length=2000)
 
@@ -378,10 +480,10 @@ def _transcribe_job(workflow_id: str, identity: str):
     try:
         result = transcribe_artifact(AudioStore(_root() / "artifacts"), artifact)
         record_id = store.add_record("transcription", result.model_dump(mode="json"))
-        store.set_record(workflow_id, "transcription_record_id", record_id, "ANALYZED", identity)
+        _handle_key(store.set_record, workflow_id, "transcription_record_id", record_id, "ANALYZED", identity, expected_revision=workflow["revision"])
     except Exception:
         store.event(workflow_id, "TRANSCRIPTION_FAILED", identity, {"reason": "Processing failed; inspect server logs privately"})
-        store.mark_state(workflow_id, {"TRANSCRIBING"}, "TRANSCRIPTION_FAILED", identity)
+        store.fail_job(workflow_id, "TRANSCRIBING", "TRANSCRIPTION_FAILED", identity, workflow["revision"])
 
 
 @router.post("/workflows/{workflow_id}/transcribe")
@@ -404,6 +506,7 @@ def workflow_details(workflow_id: str, identity: str = Depends(reviewer)):
     details["audio_artifact"] = store.record(workflow["audio_record_id"], "audio_artifact")
     for field, kind in (("transcription_record_id", "transcription"),
                         ("alignment_record_id", "alignment"),
+                        ("evidence_record_id", "verified_evidence"),
                         ("confirmed_alignment_record_id", "confirmed_alignment"),
                         ("acoustic_record_id", "acoustic"),
                         ("verification_record_id", "verification")):
@@ -431,7 +534,7 @@ def propose_workflow_alignment(workflow_id: str, identity: str = Depends(reviewe
     transcription = TranscriptionResult.model_validate(store.record(workflow["transcription_record_id"], "transcription"))
     run = propose_alignment(policy.script, transcription.transcript)
     record_id = store.add_record("alignment", run.model_dump(mode="json"))
-    store.set_record(workflow_id, "alignment_record_id", record_id, "IN_REVIEW", identity)
+    _handle_key(store.set_record, workflow_id, "alignment_record_id", record_id, "IN_REVIEW", identity, expected_revision=workflow["revision"])
     return {"record_id": record_id, "alignment": run}
 
 
@@ -451,7 +554,7 @@ def confirm_alignment(workflow_id: str, payload: AlignmentConfirmationInput,
     record_id = store.add_record("confirmed_alignment", {"confirmations": payload.confirmations,
                                                            "reviewer_id": identity, "reason": payload.reason,
                                                            "transcription_record_id": workflow["transcription_record_id"]})
-    store.set_record(workflow_id, "confirmed_alignment_record_id", record_id, "IN_REVIEW", identity)
+    _handle_key(store.set_record, workflow_id, "confirmed_alignment_record_id", record_id, "IN_REVIEW", identity, expected_revision=workflow["revision"])
     store.event(workflow_id, "ALIGNMENT_CONFIRMED", identity, {"record_id": record_id,
                 "segment_ids": list(payload.confirmations), "reason": payload.reason})
     return {"record_id": record_id, "status": "CONFIRMED"}
@@ -470,11 +573,11 @@ def _acoustic_job(workflow_id: str, identity: str, model_id: str):
                                   FasterWhisperProvider(model_id, local_files_only=True),
                                   primary_provider=transcription.provider, primary_model=transcription.model)
         record_id = store.add_record("acoustic", result.model_dump(mode="json"))
-        store.set_record(workflow_id, "acoustic_record_id", record_id, "IN_REVIEW", identity)
+        _handle_key(store.set_record, workflow_id, "acoustic_record_id", record_id, "IN_REVIEW", identity, expected_revision=workflow["revision"])
         _run_verification(workflow_id, identity, False)
     except Exception:
         store.event(workflow_id, "ACOUSTIC_RECHECK_FAILED", identity, {"reason": "Processing failed; inspect server logs privately"})
-        store.mark_state(workflow_id, {"ACOUSTIC_RECHECKING"}, "ACOUSTIC_RECHECK_FAILED", identity)
+        store.fail_job(workflow_id, "ACOUSTIC_RECHECKING", "ACOUSTIC_RECHECK_FAILED", identity, workflow["revision"])
 
 
 @router.post("/workflows/{workflow_id}/acoustic-recheck")
@@ -505,6 +608,11 @@ def _run_verification(workflow_id: str, identity: str, hybrid: bool) -> tuple[st
         if confirmation["transcription_record_id"] != workflow["transcription_record_id"]:
             raise HTTPException(409, "alignment refers to an outdated transcription")
         transcript = apply_confirmed_alignment(transcript, confirmation["confirmations"], policy.script)
+    if workflow["evidence_record_id"]:
+        evidence = VerifiedTranscriptEvidence.model_validate(store.record(workflow["evidence_record_id"], "verified_evidence"))
+        if evidence.raw_transcription_record_id != workflow["transcription_record_id"]:
+            raise HTTPException(409, "human evidence refers to stale transcription")
+        transcript = evidence.transcript
     request = VerificationRequest(**policy.model_dump(mode="json"), transcript=transcript)
     result = verify(request, hybrid=hybrid)
     if workflow["acoustic_record_id"]:
@@ -535,17 +643,18 @@ def _run_verification(workflow_id: str, identity: str, hybrid: bool) -> tuple[st
                 f.rule_id.startswith("ACOUSTIC.") for f in result.findings):
             result.decision = Decision.REVIEW_REQUIRED
     record_id = store.add_record("verification", result.model_dump(mode="json"))
-    store.set_record(workflow_id, "verification_record_id", record_id, "IN_REVIEW", identity)
+    _handle_key(store.set_record, workflow_id, "verification_record_id", record_id, "IN_REVIEW", identity, expected_revision=workflow["revision"])
     return record_id, result
 
 
 def _verification_job(workflow_id: str, identity: str):
+    workflow = _store().workflow(workflow_id)
     try:
         _run_verification(workflow_id, identity, True)
     except Exception:
         store = _store()
         store.event(workflow_id, "VERIFICATION_FAILED", identity, {"reason": "Processing failed; inspect server logs privately"})
-        store.mark_state(workflow_id, {"VERIFYING"}, "VERIFICATION_FAILED", identity)
+        store.fail_job(workflow_id, "VERIFYING", "VERIFICATION_FAILED", identity, workflow["revision"])
 
 
 @router.post("/workflows/{workflow_id}/verify")
@@ -565,12 +674,43 @@ def verify_workflow(workflow_id: str, tasks: BackgroundTasks,
 def decide_finding(workflow_id: str, index: int, payload: FindingDecisionInput,
                    identity: str = Depends(reviewer)):
     record_id = _handle_key(_store().decide_finding, workflow_id, index,
-                            payload.decision, payload.reason, identity)
+                            payload.decision, payload.reason, identity, expected_run=payload.verification_record_id)
     return {"decision_id": record_id, "status": payload.decision}
 
 
 @router.post("/workflows/{workflow_id}/signoff")
 def signoff(workflow_id: str, payload: SignoffInput, identity: str = Depends(reviewer)):
     approval_id = _handle_key(_store().signoff, workflow_id, payload.decision,
-                              payload.reason, identity)
+                              payload.reason, identity, expected_run=payload.verification_record_id)
     return {"approval_id": approval_id, "decision": payload.decision}
+
+
+@router.post("/workflows/{workflow_id}/transcript-evidence")
+def verify_spoken_transcript(workflow_id: str, payload: HumanTranscriptInput,
+                             identity: str = Depends(reviewer)):
+    """Attest actual spoken words, never edit them to resemble the approved script."""
+    store = _store()
+    workflow = _handle_key(store.workflow, workflow_id)
+    if not workflow["transcription_record_id"]:
+        raise HTTPException(409, "raw transcription is required")
+    if payload.transcript.source != "manual":
+        raise HTTPException(422, "human-reviewed transcript must use manual source")
+    artifact = AudioArtifact.model_validate(store.record(workflow["audio_record_id"], "audio_artifact"))
+    policy = ScriptPolicy.model_validate(store.record(workflow["policy_record_id"], "approved_policy"))
+    known = {i.id for i in policy.script.instructions}
+    for segment in payload.transcript.segments:
+        if segment.instruction_id is not None and segment.instruction_id not in known:
+            raise HTTPException(422, "unknown instruction reference")
+        if segment.end_seconds is not None and segment.end_seconds > artifact.duration_seconds:
+            raise HTTPException(422, "human timestamp exceeds original audio duration")
+    path = AudioStore(_root() / "artifacts").path_for(artifact.sha256, artifact.format)
+    if not path.exists() or sha256(path.read_bytes()).hexdigest() != artifact.sha256:
+        raise HTTPException(409, "original audio is missing or changed")
+    evidence = VerifiedTranscriptEvidence(transcript=payload.transcript,
+        audio_sha256=artifact.sha256, raw_transcription_record_id=workflow["transcription_record_id"],
+        previous_evidence_record_id=workflow["evidence_record_id"], reviewer_id=identity,
+        reason=payload.reason, listened_to_original=True, created_at=_now())
+    record_id = store.add_record("verified_evidence", evidence.model_dump(mode="json"))
+    _handle_key(store.set_record, workflow_id, "evidence_record_id", record_id, "IN_REVIEW", identity,
+                expected_revision=payload.expected_revision)
+    return {"record_id": record_id, "evidence": evidence, "verification_required": True}

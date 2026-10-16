@@ -232,7 +232,7 @@ def test_review_api_auth_and_approval_boundary(tmp_path, monkeypatch, case_reque
                               json={"policy_record_id": approved,
                                     "audio_record_id": artifact_id}).json()["workflow_id"]
     blocked = client.post(f"/review/workflows/{workflow_id}/signoff", headers=headers,
-                          json={"decision": "APPROVED", "reason": "test"})
+                          json={"decision": "APPROVED", "reason": "test", "verification_record_id": "missing"})
     assert blocked.status_code == 409
     details = client.get(f"/review/workflows/{workflow_id}", headers=headers).json()
     assert details["workflow"]["state"] == "DRAFT"
@@ -262,11 +262,11 @@ def test_review_api_auth_and_approval_boundary(tmp_path, monkeypatch, case_reque
     for index in range(len(result["findings"])):
         response = client.post(f"/review/workflows/{workflow_id}/findings/{index}/decision",
                                headers=headers,
-                               json={"decision": "ACCEPTED_AS_CORRECT", "reason": "Reviewed source audio"})
-        assert response.status_code == 200
+                               json={"decision": "ACCEPTED_AS_CORRECT", "reason": "Reviewed source audio", "verification_record_id": verified.json()["record_id"]})
+        assert response.status_code == 409
     signed = client.post(f"/review/workflows/{workflow_id}/signoff", headers=headers,
-                         json={"decision": "APPROVED", "reason": "Reviewed original recording"})
-    assert signed.status_code == 200
+                         json={"decision": "APPROVED", "reason": "Reviewed original recording", "verification_record_id": verified.json()["record_id"]})
+    assert signed.status_code == 409
 
 
 def test_review_store_supersedes_prior_approval(tmp_path, case_request):
@@ -306,12 +306,10 @@ def test_explicit_human_signoff_and_supersession(tmp_path, monkeypatch, case_req
     with pytest.raises(ValueError):
         store.signoff(workflow, "APPROVED", "I heard the source audio", "reviewer-1")
     for index in range(len(result.findings)):
-        store.decide_finding(workflow, index, "ACCEPTED_AS_CORRECT", "Listened to audio", "reviewer-1")
-    assert store.workflow(workflow)["state"] == "READY_FOR_SIGNOFF"
-    approval_id = store.signoff(workflow, "APPROVED", "I heard the source audio", "reviewer-1")
-    assert store.details(workflow)["approvals"][0]["audio_sha256"] == artifact.sha256
+        with pytest.raises(ValueError, match="ordinary acceptance"):
+            store.decide_finding(workflow, index, "ACCEPTED_AS_CORRECT", "Listened to audio", "reviewer-1")
     replacement = store.create_workflow(policy_id, audio_id, "reviewer-1", supersedes=workflow)
-    assert store.details(workflow)["approvals"][0]["status"] == "SUPERSEDED"
+    assert store.workflow(workflow)["state"] == "SUPERSEDED"
     assert store.workflow(replacement)["state"] == "DRAFT"
 
 
