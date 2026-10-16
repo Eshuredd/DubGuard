@@ -1,13 +1,14 @@
 # DubGuard — Industrial Narration Review
 
-Phases 1 and 2A for AMD Developer Hackathon Act III, **Intelligent Industry**. A CPU-local,
-text-first review engine compares an approved English industrial script with
-single-speaker narration transcripts under reviewer-defined constraints.
+Phases 1, 2A, 2A.1 and a Phase 2B backend foundation for AMD Developer Hackathon
+Act III, **Intelligent Industry**. The deterministic engine compares approved
+English single-speaker narration under reviewer-defined constraints; optional
+local audio transcription and a versioned human review API now surround it.
 
 **PASS_CANDIDATE is not safety certification, release approval, or a guarantee of
-semantic equivalence.** Ambiguous evidence requires human review. No audio is
-transcribed by this project. AMD inference is available only when explicitly
-selected for hybrid verification or remote evaluation.
+semantic equivalence.** Ambiguous evidence requires human review. ASR is provisional;
+only an authenticated reviewer can sign off a recording. AMD semantic inference
+is available only when explicitly selected for hybrid verification or remote evaluation.
 
 ## Run locally
 
@@ -19,12 +20,15 @@ GPU, or model.
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt -e .
+.venv/bin/python -m pip install -r requirements-audio.txt
 .venv/bin/python -m pytest -q
 .venv/bin/python -m dubguard validate examples/policy.json
 .venv/bin/python -m dubguard verify examples/acceptable.json
 .venv/bin/python -m dubguard verify examples/critical.json
 .venv/bin/python -m dubguard verify examples/asr-segments.json
+.venv/bin/python -m dubguard transcribe-audio /absolute/path/to/recording.wav
 .venv/bin/python -m dubguard evaluate --output reports
+.venv/bin/python -m dubguard.phase2_evaluation --output reports/phase2_sets.json
 .venv/bin/python -m uvicorn dubguard.api:app --host 127.0.0.1 --port 8000
 ```
 
@@ -47,7 +51,8 @@ Interactive API schemas are at [localhost /docs](http://127.0.0.1:8000/docs).
 analyzes `{script, policy, transcript}`; `?mode=hybrid` requests advisory semantic
 verification. Invalid schemas return HTTP 422. `GET /evaluation/reports` reruns
 only local paths A and B; GET never starts remote inference. This is a local
-development service with no identity/authentication or approval workflow.
+development service. The new `/review/*` routes require configured bearer-token
+authentication; the legacy `/validate` and `/verify` routes remain unchanged.
 
 ## What is implemented
 
@@ -63,11 +68,15 @@ development service with no identity/authentication or approval workflow.
 | Local semantic provider | Exact-text **mock**, solely for interface/failure tests |
 | AMD Token Factory provider | Real OpenAI-compatible chat completions via HTTPS with bounded retries/timeouts and source-validated JSON |
 | Real semantic evaluation paths | Prepared as opt-in, capped, separate basic LLM and policy-hybrid paths; local reports skip them |
-| Timestamped ASR segment input | Implemented contract; **no audio/ASR integration** |
+| Timestamped ASR segment input | Implemented contract and optional local CPU Whisper adapter; ASR output is provisional |
+| Audio intake and review | WAV/MP3 intake, FFmpeg normalization, complete-file chunking/coverage, SQLite review API |
+| Acoustic recheck | Independent local model hook with protected-term disagreement; requires a separately installed secondary model |
+| MiMo audio | Documented opt-in probe scaffold; no live audio call or quality result yet |
 | CPU Dockerfile | Provided; container build/run not verified because the local daemon is unavailable |
 
-No frontend, multilingual dubbing, video editing, model training/downloads,
-automatic certification, or automatic release approval is included.
+No frontend, multilingual dubbing, video editing, model training, automatic
+certification, or automatic release approval is included. The optional `tiny.en`
+ASR model is downloaded on first transcription unless supplied locally.
 
 ## Policy and evidence model
 
@@ -198,7 +207,7 @@ dataset/code SHA-256 fingerprints, and runtime versions. No generated timestamps
 durations, or random seeds affect local report bytes. Re-running with the same
 source, fixtures, and Python/dependencies produces the same bytes.
 
-The single Phase 2A smoke call is recorded separately in
+The original Phase 2A smoke call is recorded separately in
 `reports/amd_smoke.json`. It used the existing `examples/critical.json` and one
 HTTP attempt. The returned model alias was `self-dploy/DeepSeek-V4-Flash`; its
 measured provider latency was about 21.84 seconds. The model explanation noted
@@ -207,8 +216,11 @@ so the semantic verdict became `UNRESOLVED` with an issue linked to
 `power-state`. The deterministic engine still returned `CRITICAL_DEVIATION`.
 This is one real inference observation, not a benchmark or proof of semantic
 accuracy. The provider did not retain the rejected raw citation in the report.
-The citation-template prompt improvement was made **after** this call and has
-only mocked HTTP coverage so far; it has not been validated by another live call.
+The citation protocol now asks AMD for IDs and exact quotes, calculates offsets
+locally, and rejects repeated ambiguous substrings. A Phase 2A.1 live call on
+the same critical example is in `reports/amd_smoke_phase2.json`: one attempt
+timed out at 40.8 seconds, so there is no new model finding or citation-validity
+result. The deterministic decision remained `CRITICAL_DEVIATION`.
 
 Recall counts every critical→review decision as a miss. Precision treats a critical
 alert on either acceptable or unresolved labels as a false positive. False-alert
@@ -234,6 +246,8 @@ DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard verify examples/acce
 DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard evaluate --hybrid --output reports-local
 # Explicitly opt in to two real calls per selected case; this example selects five.
 DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard evaluate --remote --max-cases 5 --output reports-amd-5
+# Add a third, policy-prompted LLM comparator only with another explicit opt-in.
+DUBGUARD_SEMANTIC_PROVIDER=amd .venv/bin/python -m dubguard evaluate --remote --policy-baseline --max-cases 5 --output reports-amd-policy-5
 ```
 
 The mock is an exact-text stub, not semantic inference. Hybrid verification with
@@ -242,9 +256,10 @@ unless an independent critical finding already exists. Deterministic verificatio
 remains available during remote failure.
 
 The AMD call sends the script, policy, and transcript as source data and asks for
-structured JSON. It includes source-derived full-span citation templates to help
-the model return exact offsets. For each model finding, local validation checks its requirement,
-instruction, and segment IDs; exact quoted text and character offsets; policy
+structured JSON. It includes source-derived full-span citation templates, but
+asks the model to return IDs and exact quotes only. DubGuard derives character
+offsets and rejects repeated substring citations. For each finding, local validation checks its requirement,
+instruction, and segment IDs; exact quoted text; policy
 type; and segment alignment. Timestamps come solely from transcript segments.
 Fabricated or inconsistent citations are rejected and become unresolved review
 issues. The response records actual model and call IDs, attempts, and measured
@@ -260,23 +275,124 @@ JSON, and invalid evidence do not expose raw response bodies or credentials.
 Remote evaluation is separate from normal verification. `--hybrid` alone never
 calls AMD in `evaluate`. `--remote` requires `--max-cases`; it runs a basic LLM
 comparison without reviewer policy and the policy-hybrid engine on the **same
-explicit subset**. Each selected case makes two model calls plus bounded retries.
+explicit subset**. `--policy-baseline` adds a third, well-prompted LLM comparator
+with the same reviewer policy but without DubGuard's source-citation validation.
+Each selected case makes two or three model calls plus bounded retries.
 The basic LLM path is diagnostic only and cannot approve a recording. Partial
 failures suppress aggregate remote metrics. The local reports continue to use
 only the reproducible baseline and policy engine; no full remote benchmark is run
 automatically.
 
-Recommended next phase: independently adjudicate held-out industrial narration
-examples, calibrate semantic evidence and uncertainty rates, run a separately
-authorized capped evaluation, and build an ASR adapter with measured timing and
-confidence quality. Keep human audio review and final approval outside the model.
+Recommended next phase: independently adjudicate held-out recorded narration,
+measure acoustic and semantic errors, replace the in-process queue and shared
+tokens for deployment, and run separately authorized capped remote evaluations.
+Keep human audio review and final approval outside the model.
+
+## Audio and human-review workflow
+
+Install `requirements-audio.txt` for the bundled FFmpeg binary and the optional
+CPU `faster-whisper` adapter. The default `tiny.en` model is about 78 MB and was
+chosen for a local development smoke test, not industrial accuracy. Set
+`DUBGUARD_WHISPER_MODEL` to a local model path to avoid first-use downloading.
+WAV and MP3 are accepted by signature and decoded to 16 kHz mono PCM. Uploads
+default to 25 MB and 20 minutes, configurable within bounded limits via `.env`.
+The original bytes are stored under a SHA-256 name in a private local directory;
+every read checks the hash. The filesystem is not cryptographically immutable.
+Working WAV files and chunks are temporary and cleaned after processing. Each
+chunk has an owned core and overlap; timestamps are mapped to original audio.
+`processed_seconds` covers the entire recording or processing fails. Untranscribed
+regions are labeled digital silence, possible silence, or unexplained signal;
+possible silence is not proof that speech was absent. ASR never provides a
+calibrated confidence score here, so its segments remain uncertain and transcript
+completeness stays `unknown` pending human review.
+
+For a local reviewer account, set a **unique random token** (24+ characters) in
+`DUBGUARD_REVIEW_TOKENS_JSON`, for example using an environment variable in your
+private shell or ignored `.env`. Never put real tokens in Git. The JSON shape is
+`{"reviewer-id":"random-secret-token"}`. The `/review/*` API uses Bearer tokens;
+the old verification API is intentionally unauthenticated local development API.
+Configure `DUBGUARD_DATA_DIR` as a private writable path. In production, deploy
+behind HTTPS and replace this MVP shared-secret identity layer with your identity
+provider and durable job queue.
+
+The review API sequence is:
+
+1. `POST /review/policy-drafts` with an existing `{script,policy}` payload, or
+   `?origin=ai` for an externally proposed draft. A reviewer may submit an edited
+   version with `POST /review/policy-drafts/{id}/revise`, then explicitly call
+   `POST /review/policy-drafts/{id}/approve`. Approval records the authenticated
+   reviewer as the policy and variant approver; draft author strings are not trusted.
+2. `POST /review/artifacts` as multipart form field `file` with a WAV/MP3, then
+   `POST /review/workflows` with `policy_record_id` and `audio_record_id`.
+3. `POST /review/workflows/{id}/transcribe` starts an in-process background job.
+   Poll `GET /review/workflows/{id}` for the transcription and its coverage.
+4. `POST /review/workflows/{id}/alignments/propose` gives tentative mappings.
+   `POST /review/workflows/{id}/alignments/confirm` takes a map of segment IDs to
+   instruction IDs and a reason; only confirmed IDs enter verification.
+5. `POST /review/workflows/{id}/verify` runs deterministic verification. Add
+   `?mode=hybrid` to queue AMD semantic analysis. If a separate local model is
+   installed, set `DUBGUARD_SECONDARY_WHISPER_MODEL` and call
+   `POST /review/workflows/{id}/acoustic-recheck` to independently re-transcribe
+   protected regions without supplying approved words.
+6. `POST /review/workflows/{id}/findings/{index}/decision` records one of
+   `ACCEPTED_AS_CORRECT`, `CORRECTION_REQUIRED`, `RERECORD_REQUIRED`, or
+   `ESCALATED` with a reason. Once every current finding has an explicit accepted
+   decision, the workflow reaches `READY_FOR_SIGNOFF`.
+7. `POST /review/workflows/{id}/signoff` with `APPROVED` or `REJECTED` and a reason
+   records an explicit human decision bound to exact script/policy revisions and
+   audio SHA-256. Approval also requires complete processing coverage. Creating a
+   new workflow with `supersedes` retains earlier history and marks old approvals
+   superseded.
+
+`GET /review/audit-events` returns bounded authenticated audit history, including
+policy draft, revision, and approval actions. Recorded reviewer IDs come from
+configured bearer-token identity, not an arbitrary request field.
+
+SQLite audit events preserve previous decisions but are not tamper-proof. The
+in-process FastAPI background tasks are not a durable production queue. A local
+Whisper smoke test on a short synthesized English clip returned “Switch the power
+off.” in 0.46 seconds after the model was cached; Whisper reported an end time
+beyond the 1.217-second clip, which DubGuard clipped and labeled uncertain. This
+test demonstrates invocation and timestamp safeguards, not ASR accuracy.
+
+AMD's [MiMo-V2.6-Flash model documentation](https://amd-aim.github.io/radeon-cloud-docs/zh-cn/models/mimo-v2-6-flash/)
+shows `input_audio` with base64 WAV data. `AMD_TOKEN_FACTORY_AUDIO_MODEL` is
+separate from `AMD_TOKEN_FACTORY_MODEL`; the MiMo probe has a local 5 MB WAV cap
+and no automatic calls. Its actual transcription quality, duration limits,
+timestamps, latency, and suitability remain unverified because no MiMo audio
+call was authorized or run. Audio-input support alone is not evidence of ASR quality.
+
+`reports/phase2_sets.json` partitions the existing synthetic development cases
+into semantic, numerical/logical, and uncertainty subsets. Acoustic confusion,
+ASR accuracy, audio alignment, and reviewer-workload sets are explicitly marked
+awaiting human-verified recorded audio or review sessions. No result is reported
+for those sets, for MiMo, or for remote LLM comparators. The optional capped remote
+evaluation remains available through the Phase 2A CLI; a full benchmark is never
+started automatically.
+
+For future **human-adjudicated recorded audio**, use
+`examples/audio-evaluation.example.json` as a field template, replace every
+placeholder with a real local recording, its SHA-256, spoken ground truth, label,
+and complete approved policy, then run:
+
+```bash
+.venv/bin/python -m dubguard.audio_evaluation /absolute/path/to/manifest.json --model-path tiny.en --output reports/audio_evaluation.json
+```
+
+This command is explicitly opt-in, uses a locally cached Whisper model, checks
+the recording hash, and never calls AMD. It reports primary ASR word errors,
+protected-term errors, processing coverage, provisional alignment, deterministic
+decisions, and separate development/held-out counts. Add
+`--secondary-model-path /absolute/path/to/different/local/model` to run local
+targeted acoustic rechecks. No recorded-audio manifest or quality result is
+included in this repository, because no human-adjudicated recordings were supplied.
 
 ## CPU container
 
 ```bash
-docker build -t dubguard:phase1 .
-docker run --rm -p 127.0.0.1:8000:8000 dubguard:phase1
-docker run --rm dubguard:phase1 python -m dubguard evaluate --output /tmp/reports
+docker build -t dubguard:phase2 .
+docker run --rm -p 127.0.0.1:8000:8000 dubguard:phase2
+docker run --rm dubguard:phase2 python -m dubguard evaluate --output /tmp/reports
 ```
 
 The image uses ordinary CPU Python and a non-root user. No GPU runtime, remote
@@ -291,6 +407,12 @@ independently of Docker.
   policy rules, source evidence, and decision aggregation.
 - `src/dubguard/providers.py`, `semantic_validation.py`: local/mock and real AMD
   providers, response parsing, and source-reference checks.
+- `src/dubguard/audio.py`, `alignment.py`, `acoustic.py`, `amd_audio.py`:
+  local ASR intake, tentative mapping, targeted disagreement checks, and optional
+  MiMo audio probe.
+- `src/dubguard/review.py`: authenticated SQLite review workflow and audit events.
+- `src/dubguard/phase2_evaluation.py`, `audio_evaluation.py`: development subsets
+  and opt-in human-adjudicated recorded-audio evaluation.
 - `src/dubguard/evaluation.py`, `data/`: explicit fixtures, metrics, report export.
 - `src/dubguard/api.py`, `cli.py`: FastAPI endpoints and local CLI.
 - `tests/`: corpus behavior, source-backed evidence, grammar edge cases, policy
@@ -299,7 +421,6 @@ independently of Docker.
 - `examples/`, `requirements*.txt`, `.env.example`, `Dockerfile`: runnable inputs
   and local setup; `IMPLEMENTATION_PLAN.md` records the initial inspection/plan.
 
-The initial Phase 1 workspace was empty; Git metadata is now present. No Phase 2A
-commit or push was performed. Test output
+No commit or push was performed in this Phase 2 run. Test output
 may include one upstream Starlette/AnyIO deprecation warning; it does not fail
 the suite.

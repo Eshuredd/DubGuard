@@ -1,4 +1,4 @@
-"""CPU-local API; no upload, transcription, release, or approval endpoints."""
+"""DubGuard API: text verification plus authenticated audio/review workflow."""
 
 from typing import Literal
 
@@ -8,14 +8,17 @@ from fastapi.responses import PlainTextResponse
 from .engine import verify
 from .evaluation import evaluate, markdown_report
 from .schemas import ReviewResult, ScriptPolicy, VerificationRequest
+from .review import router as review_router
 
-app = FastAPI(title="DubGuard — Industrial Narration Review", version="0.2.0",
+app = FastAPI(title="DubGuard — Industrial Narration Review", version="0.3.0",
               description="English single-speaker text review. PASS_CANDIDATE is not safety certification or release approval.")
+app.include_router(review_router)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "asr_integrated": False, "amd_inference_integrated": False}
+    return {"status": "ok", "asr_integrated": True, "amd_inference_integrated": True,
+            "note": "ASR requires optional local audio dependencies and a Whisper model."}
 
 
 @app.post("/validate")

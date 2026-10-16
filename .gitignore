@@ -6,6 +6,7 @@ __pycache__/
 build/
 dist/
 .env
+.dubguard-data/
 .env.*
 !.env.example
 .DS_Store

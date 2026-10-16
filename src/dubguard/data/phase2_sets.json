@@ -1,0 +1,18 @@
+{
+  "semantic_comparison": {
+    "origin": "synthetic_text_development",
+    "case_ids": ["A01", "A02", "A03", "A12", "A13", "A15", "A16", "A20", "A23", "C22", "C23", "U07"]
+  },
+  "numerical_and_logical_changes": {
+    "origin": "synthetic_text_development",
+    "case_ids": ["A04", "A06", "A07", "A08", "A09", "A10", "A11", "A14", "A17", "A21", "A22", "A24", "C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08", "C09", "C10", "C11", "C12", "C13", "C14", "C15", "C16", "C19", "C20", "C21", "C24", "U10"]
+  },
+  "acoustic_confusion": {"origin": "human_verified_recorded_audio", "case_ids": []},
+  "asr_transcription_accuracy": {"origin": "human_verified_recorded_audio", "case_ids": []},
+  "audio_script_alignment": {"origin": "human_verified_recorded_audio", "case_ids": []},
+  "uncertainty_detection": {
+    "origin": "synthetic_text_development",
+    "case_ids": ["U01", "U02", "U03", "U04", "U05", "U06", "U07", "U08", "U09", "U10", "U11", "U12"]
+  },
+  "human_review_workload": {"origin": "human_verified_review_sessions", "case_ids": []}
+}

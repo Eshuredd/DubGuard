@@ -10,7 +10,7 @@ client = TestClient(app)
 
 
 def test_api_health_and_openapi():
-    assert client.get("/health").json()["asr_integrated"] is False
+    assert client.get("/health").json()["asr_integrated"] is True
     assert client.get("/openapi.json").status_code == 200
 
 

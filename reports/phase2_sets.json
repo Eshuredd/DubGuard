@@ -1,0 +1,456 @@
+{
+  "limitations": [
+    "Text subsets reuse the original 60 synthetic development cases; they are not new held-out evidence.",
+    "No human-verified recorded audio or review sessions were supplied, so audio and workload metrics are undefined.",
+    "No remote benchmark or MiMo audio probe was run."
+  ],
+  "remote_paths": {
+    "basic_llm": "not_run",
+    "hybrid_amd": "not_run",
+    "well_prompted_llm": "not_run"
+  },
+  "schema_version": "1",
+  "set_definition_sha256": "50a963d2ae506274a62631ad1bbcd63e5e5927c7b774d361363a663ee9a65f89",
+  "sets": {
+    "acoustic_confusion": {
+      "count": 0,
+      "metrics": null,
+      "origin": "human_verified_recorded_audio",
+      "status": "awaiting_human_verified_data"
+    },
+    "asr_transcription_accuracy": {
+      "count": 0,
+      "metrics": null,
+      "origin": "human_verified_recorded_audio",
+      "status": "awaiting_human_verified_data"
+    },
+    "audio_script_alignment": {
+      "count": 0,
+      "metrics": null,
+      "origin": "human_verified_recorded_audio",
+      "status": "awaiting_human_verified_data"
+    },
+    "human_review_workload": {
+      "count": 0,
+      "metrics": null,
+      "origin": "human_verified_review_sessions",
+      "status": "awaiting_human_verified_data"
+    },
+    "numerical_and_logical_changes": {
+      "count": 33,
+      "origin": "synthetic_text_development",
+      "paths": {
+        "A_normalized_diff": {
+          "acceptable_escalation_rate": 0.833333,
+          "critical_deviation_precision": 0.645161,
+          "critical_deviation_recall": 1.0,
+          "decision_errors": 11,
+          "false_alert_count_on_acceptable": 10,
+          "false_alert_rate_on_acceptable": 0.833333,
+          "false_negatives": 0,
+          "false_positives": 11,
+          "label_counts": {
+            "ACCEPTABLE": 12,
+            "CRITICAL": 20,
+            "UNRESOLVED": 1
+          },
+          "per_category": {
+            "changed-unit": {
+              "count": 5,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "negation": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            },
+            "numeric-ambiguity": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            },
+            "numeric-range": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            },
+            "polarity": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "quantity": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "sequence": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "temperature": {
+              "count": 5,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            },
+            "time": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            },
+            "unit-conversion": {
+              "count": 6,
+              "critical_misses": 0,
+              "errors": 6,
+              "false_critical_alerts": 6,
+              "unsafe_passes": 0
+            }
+          },
+          "total": 33,
+          "true_positives": 20,
+          "unresolved_count": 0,
+          "unresolved_rate": 0.0,
+          "unsafe_passes": 0
+        },
+        "B_policy_engine": {
+          "acceptable_escalation_rate": 0.0,
+          "critical_deviation_precision": 1.0,
+          "critical_deviation_recall": 1.0,
+          "decision_errors": 0,
+          "false_alert_count_on_acceptable": 0,
+          "false_alert_rate_on_acceptable": 0.0,
+          "false_negatives": 0,
+          "false_positives": 0,
+          "label_counts": {
+            "ACCEPTABLE": 12,
+            "CRITICAL": 20,
+            "UNRESOLVED": 1
+          },
+          "per_category": {
+            "changed-unit": {
+              "count": 5,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "negation": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "numeric-ambiguity": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "numeric-range": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "polarity": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "quantity": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "sequence": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "temperature": {
+              "count": 5,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "time": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "unit-conversion": {
+              "count": 6,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            }
+          },
+          "total": 33,
+          "true_positives": 20,
+          "unresolved_count": 1,
+          "unresolved_rate": 0.030303,
+          "unsafe_passes": 0
+        }
+      },
+      "status": "measured_development_only"
+    },
+    "semantic_comparison": {
+      "count": 12,
+      "origin": "synthetic_text_development",
+      "paths": {
+        "A_normalized_diff": {
+          "acceptable_escalation_rate": 0.555556,
+          "critical_deviation_precision": 0.25,
+          "critical_deviation_recall": 1.0,
+          "decision_errors": 6,
+          "false_alert_count_on_acceptable": 5,
+          "false_alert_rate_on_acceptable": 0.555556,
+          "false_negatives": 0,
+          "false_positives": 6,
+          "label_counts": {
+            "ACCEPTABLE": 9,
+            "CRITICAL": 2,
+            "UNRESOLVED": 1
+          },
+          "per_category": {
+            "hard-negative": {
+              "count": 6,
+              "critical_misses": 0,
+              "errors": 3,
+              "false_critical_alerts": 3,
+              "unsafe_passes": 0
+            },
+            "paraphrase": {
+              "count": 4,
+              "critical_misses": 0,
+              "errors": 3,
+              "false_critical_alerts": 3,
+              "unsafe_passes": 0
+            },
+            "semantic-challenge": {
+              "count": 2,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            }
+          },
+          "total": 12,
+          "true_positives": 2,
+          "unresolved_count": 0,
+          "unresolved_rate": 0.0,
+          "unsafe_passes": 0
+        },
+        "B_policy_engine": {
+          "acceptable_escalation_rate": 0.0,
+          "critical_deviation_precision": null,
+          "critical_deviation_recall": 0.0,
+          "decision_errors": 2,
+          "false_alert_count_on_acceptable": 0,
+          "false_alert_rate_on_acceptable": 0.0,
+          "false_negatives": 2,
+          "false_positives": 0,
+          "label_counts": {
+            "ACCEPTABLE": 9,
+            "CRITICAL": 2,
+            "UNRESOLVED": 1
+          },
+          "per_category": {
+            "hard-negative": {
+              "count": 6,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "paraphrase": {
+              "count": 4,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "semantic-challenge": {
+              "count": 2,
+              "critical_misses": 2,
+              "errors": 2,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            }
+          },
+          "total": 12,
+          "true_positives": 0,
+          "unresolved_count": 3,
+          "unresolved_rate": 0.25,
+          "unsafe_passes": 0
+        }
+      },
+      "status": "measured_development_only"
+    },
+    "uncertainty_detection": {
+      "count": 12,
+      "origin": "synthetic_text_development",
+      "paths": {
+        "A_normalized_diff": {
+          "acceptable_escalation_rate": null,
+          "critical_deviation_precision": 0.0,
+          "critical_deviation_recall": null,
+          "decision_errors": 5,
+          "false_alert_count_on_acceptable": 0,
+          "false_alert_rate_on_acceptable": null,
+          "false_negatives": 0,
+          "false_positives": 5,
+          "label_counts": {
+            "UNRESOLVED": 12
+          },
+          "per_category": {
+            "alignment": {
+              "count": 2,
+              "critical_misses": 0,
+              "errors": 2,
+              "false_critical_alerts": 2,
+              "unsafe_passes": 0
+            },
+            "asr": {
+              "count": 4,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "missing-evidence": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "numeric-ambiguity": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            },
+            "paraphrase": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            },
+            "warning": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 1,
+              "false_critical_alerts": 1,
+              "unsafe_passes": 0
+            }
+          },
+          "total": 12,
+          "true_positives": 0,
+          "unresolved_count": 7,
+          "unresolved_rate": 0.583333,
+          "unsafe_passes": 0
+        },
+        "B_policy_engine": {
+          "acceptable_escalation_rate": null,
+          "critical_deviation_precision": null,
+          "critical_deviation_recall": null,
+          "decision_errors": 0,
+          "false_alert_count_on_acceptable": 0,
+          "false_alert_rate_on_acceptable": null,
+          "false_negatives": 0,
+          "false_positives": 0,
+          "label_counts": {
+            "UNRESOLVED": 12
+          },
+          "per_category": {
+            "alignment": {
+              "count": 2,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "asr": {
+              "count": 4,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "missing-evidence": {
+              "count": 3,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "numeric-ambiguity": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "paraphrase": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            },
+            "warning": {
+              "count": 1,
+              "critical_misses": 0,
+              "errors": 0,
+              "false_critical_alerts": 0,
+              "unsafe_passes": 0
+            }
+          },
+          "total": 12,
+          "true_positives": 0,
+          "unresolved_count": 12,
+          "unresolved_rate": 1.0,
+          "unsafe_passes": 0
+        }
+      },
+      "status": "measured_development_only"
+    }
+  },
+  "source_dataset_sha256": "ed0a2f2b7879718e308e99a158fec0c502c541e8fb476b7f769cf87d739a0da3"
+}

@@ -1,0 +1,74 @@
+{
+  "decision": "CRITICAL_DEVIATION",
+  "findings": [
+    {
+      "rule_id": "POLARITY.REVERSED",
+      "status": "VIOLATION",
+      "constraint_id": "power-state",
+      "instruction_ids": [
+        "power"
+      ],
+      "approved": [
+        {
+          "source": "approved",
+          "instruction_id": "power",
+          "segment_id": null,
+          "text": "Switch the power off.",
+          "start_char": 0,
+          "end_char": 21,
+          "start_seconds": null,
+          "end_seconds": null,
+          "timing_scope": null
+        }
+      ],
+      "observed": [
+        {
+          "source": "observed",
+          "instruction_id": "power",
+          "segment_id": "s1",
+          "text": "Switch the power on.",
+          "start_char": 0,
+          "end_char": 20,
+          "start_seconds": null,
+          "end_seconds": null,
+          "timing_scope": null
+        }
+      ],
+      "explanation": "The reviewer-protected polarity phrase was replaced by its declared reversal in the same instruction template.",
+      "provider": null,
+      "model_call_id": null
+    },
+    {
+      "rule_id": "SEMANTIC.UNAVAILABLE",
+      "status": "UNRESOLVED",
+      "constraint_id": null,
+      "instruction_ids": [],
+      "approved": [],
+      "observed": [],
+      "explanation": "Requested real semantic verification did not run. Mock or unavailable inference cannot clear this request.",
+      "provider": null,
+      "model_call_id": null
+    }
+  ],
+  "script_id": "power",
+  "script_revision": "1",
+  "policy_id": "power-policy",
+  "policy_revision": "1",
+  "engine_version": "0.2.0",
+  "mode": "hybrid",
+  "semantic": {
+    "provider": "amd-token-factory",
+    "status": "unavailable",
+    "verdict": "UNRESOLVED",
+    "explanation": "AMD request timed out or failed in transit; review is required.",
+    "real_inference": false,
+    "call_id": null,
+    "model": null,
+    "findings": [],
+    "issues": [],
+    "response_valid": false,
+    "latency_ms": 40804.01379195973,
+    "attempts": 1
+  },
+  "safety_notice": "Review aid only. PASS_CANDIDATE is not safety certification or release approval."
+}

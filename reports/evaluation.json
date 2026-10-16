@@ -1,10 +1,10 @@
 {
   "code_sha256": {
     "engine.py": "54c05a248664df95859ec05fea3d4b2cb2e35b01ae23f291caad0cc041f5b42c",
-    "evaluation.py": "1e829cd85ead0497a4a9188ae432d0b4a28b2f28f5f9367c7696f11cb3bc6ca5",
-    "providers.py": "2d350fc17d253cf778bd8ced78d18665801556a18ee38a99800d4c2b41788289",
-    "schemas.py": "f9500d4462c54cd13cf13548779d38cb50eea41db625fe91dae33176f47eb69f",
-    "semantic_validation.py": "46fdafa85afbd45c524985819c6df74de317e81ddd3535fb1b76d0a4f97f25d2",
+    "evaluation.py": "f391322bec0d0f03f1fedb75dd51095c99ed3cd182b5c6883f00b7b7d7b19425",
+    "providers.py": "f1c13f28d1b4a28968158cd8fe21ecc387fae45066512f1518d625b500dcbb9a",
+    "schemas.py": "cb769857ae830417dc24ffa9d2f3cd6bda663bc81cdce429a56c393b9aff61ea",
+    "semantic_validation.py": "62e44281be34434fd114e91848b23260062fb1d5fdba2f4bc84f4a5400f865c1",
     "text.py": "7332d71e9f3558b72ad79cfacdb02a059088ed5f96aa1df50c5d367da7e11b1f"
   },
   "dataset": {
@@ -14,12 +14,12 @@
     "remote_selected_count": 0
   },
   "dataset_sha256": "ed0a2f2b7879718e308e99a158fec0c502c541e8fb476b7f769cf87d739a0da3",
-  "engine_version": "0.2.0",
+  "engine_version": "0.3.0",
   "limitations": [
     "Small, curated synthetic development set, not a held-out industrial benchmark.",
     "Instruction mappings and transcript completeness are supplied review metadata.",
-    "No audio transcription or industrial safety approval is demonstrated.",
-    "Basic LLM verdicts are diagnostic evaluation outputs, not production approval decisions."
+    "This text-only corpus does not measure the integrated audio transcription path or industrial safety approval.",
+    "Basic and policy-prompted LLM verdicts are diagnostic evaluation outputs, not production approval decisions."
   ],
   "metric_definitions": {
     "acceptable_escalation_rate": "acceptable predicted critical or review / all acceptable",
@@ -1343,7 +1343,7 @@
           "rationale": "Original power instruction is unchanged.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -1444,7 +1444,7 @@
           "rationale": "Reviewer explicitly approved turn instead of switch.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -1545,7 +1545,7 @@
           "rationale": "Reviewer explicitly approved leave closed.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -1646,7 +1646,7 @@
           "rationale": "Never is an explicitly approved prohibition, not a reversal.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -1747,7 +1747,7 @@
           "rationale": "Approved warning paraphrase preserves the required isolation step.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -1848,7 +1848,7 @@
           "rationale": "One minute is exactly 60 seconds and this phrasing is approved.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -1949,7 +1949,7 @@
           "rationale": "Same template and exact 60-second to 1-minute conversion.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2050,7 +2050,7 @@
           "rationale": "176 Fahrenheit is exactly 80 Celsius with unchanged inclusive upper bound.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2151,7 +2151,7 @@
           "rationale": "353.15 kelvin is exactly 80 Celsius.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2252,7 +2252,7 @@
           "rationale": "Both pressure endpoints convert exactly from bar to kPa.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2353,7 +2353,7 @@
           "rationale": "One centimeter equals ten millimeters.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2454,7 +2454,7 @@
           "rationale": "Case and whitespace alone do not change an instruction.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2555,7 +2555,7 @@
           "rationale": "Decimal formatting preserves the exact count.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2660,7 +2660,7 @@
           "rationale": "All explicitly protected steps occur in approved order.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2883,7 +2883,7 @@
           "rationale": "This reviewer imposed no ordering constraint on the two exact administrative steps.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -2984,7 +2984,7 @@
           "rationale": "The exact prohibition contains unlocked; substring polarity matching must not raise an alarm.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3085,7 +3085,7 @@
           "rationale": "Negative temperature range is unchanged.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3186,7 +3186,7 @@
           "rationale": "Complete exact ASR evidence exceeds the configured confidence threshold and supplies segment times.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3287,7 +3287,7 @@
           "rationale": "Protected warning is unchanged.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3388,7 +3388,7 @@
           "rationale": "Equivalent unit spelling within the same numeric template.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3489,7 +3489,7 @@
           "rationale": "En dash expresses the same two endpoints in the supported grammar.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3590,7 +3590,7 @@
           "rationale": "Explicit approved maintain-temperature wording.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3691,7 +3691,7 @@
           "rationale": "Exactly the configured ASR confidence threshold is sufficient under this synthetic policy.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3792,7 +3792,7 @@
           "rationale": "Hundredth of a meter is exactly ten millimeters.",
           "result": {
             "decision": "PASS_CANDIDATE",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3893,7 +3893,7 @@
           "rationale": "Power on reverses the explicitly protected off state.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -3957,7 +3957,7 @@
           "rationale": "Reversal also applies to the explicitly approved turn template.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4021,7 +4021,7 @@
           "rationale": "Open reverses the protected closed valve state.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4085,7 +4085,7 @@
           "rationale": "Removing not permits bypassing the interlock.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4149,7 +4149,7 @@
           "rationale": "Removing not now requires the guard to remain unlocked.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4213,7 +4213,7 @@
           "rationale": "Minimum wait has been halved.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4277,7 +4277,7 @@
           "rationale": "Sixty minutes is not sixty seconds, even if a longer wait seems conservative.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4341,7 +4341,7 @@
           "rationale": "A minimum wait was changed to a maximum wait.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4405,7 +4405,7 @@
           "rationale": "The allowed upper temperature was raised.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4469,7 +4469,7 @@
           "rationale": "Keeping the number while changing Celsius to Fahrenheit changes the limit.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4533,7 +4533,7 @@
           "rationale": "An upper bound was reversed into a lower bound.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4597,7 +4597,7 @@
           "rationale": "Upper pressure endpoint changed from four to five bar.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4661,7 +4661,7 @@
           "rationale": "Lower pressure endpoint changed.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4725,7 +4725,7 @@
           "rationale": "Pressure units changed without converting the values.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4789,7 +4789,7 @@
           "rationale": "Required bolt count was reduced.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4853,7 +4853,7 @@
           "rationale": "Ten centimeters is ten times the protected clearance.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4915,7 +4915,7 @@
           "rationale": "A protected warning is absent from a transcript explicitly declared complete.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -4967,7 +4967,7 @@
           "rationale": "Reviewer explicitly identified this energized-maintenance wording as dangerous.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5035,7 +5035,7 @@
           "rationale": "Guard opening precedes isolation instead of following it.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5259,7 +5259,7 @@
           "rationale": "The protected valve closure step is omitted from complete evidence.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5457,7 +5457,7 @@
           "rationale": "Losing the minus sign changes the negative temperature range.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5521,7 +5521,7 @@
           "rationale": "Manually labeled dangerous instruction to energize the power; outside the explicit reversal template, so conservative review is expected.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5585,7 +5585,7 @@
           "rationale": "Manually labeled bypass permission despite a changed imperative template; engine must not clear it.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5649,7 +5649,7 @@
           "rationale": "A length is replaced by a time unit within the same template.",
           "result": {
             "decision": "CRITICAL_DEVIATION",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5713,7 +5713,7 @@
           "rationale": "Low confidence means the apparent off-to-on reversal is not reliable evidence.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5777,7 +5777,7 @@
           "rationale": "Unknown ASR confidence cannot support automatic clearance even for exact text.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5841,7 +5841,7 @@
           "rationale": "Explicit inaudible marker covers the protected polarity word.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -5903,7 +5903,7 @@
           "rationale": "An incomplete recording cannot establish warning omission.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [],
@@ -5966,7 +5966,7 @@
           "rationale": "Completeness defaults to unknown even when a provided segment is exact.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [],
@@ -6078,7 +6078,7 @@
           "rationale": "Changed text without reviewed instruction mapping cannot be aligned by similarity alone.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [],
@@ -6153,7 +6153,7 @@
           "rationale": "Plausible off-state paraphrase is not explicitly approved and may be context-dependent.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6217,7 +6217,7 @@
           "rationale": "Empty numeric evidence cannot support a changed-quantity conclusion.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6282,7 +6282,7 @@
           "rationale": "Repeated instruction segments require manual segmentation/repetition review.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6357,7 +6357,7 @@
           "rationale": "A numeral spoken as words is outside this numeric grammar and is not an approved variant.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6458,7 +6458,7 @@
           "rationale": "Changed warning language is not a known dangerous alternative and requires semantic review.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6559,7 +6559,7 @@
           "rationale": "A human-marked uncertain word overrides high aggregate ASR confidence.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6625,7 +6625,7 @@
           "rationale": "Manually labeled dangerous instruction to energize the power; outside the explicit reversal template, so conservative review is expected.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6689,7 +6689,7 @@
           "rationale": "Manually labeled bypass permission despite a changed imperative template; engine must not clear it.",
           "result": {
             "decision": "REVIEW_REQUIRED",
-            "engine_version": "0.2.0",
+            "engine_version": "0.3.0",
             "findings": [
               {
                 "approved": [
@@ -6893,13 +6893,26 @@
       "metrics": null,
       "reason": "Basic LLM baseline requires explicit remote opt-in and real inference.",
       "status": "skipped"
+    },
+    "E_policy_llm": {
+      "cases": [],
+      "metrics": null,
+      "reason": "Policy-prompted LLM baseline requires explicit capped remote opt-in.",
+      "status": "skipped"
     }
   },
+  "remote_latency_ms_total": null,
   "remote_request_attempts": 0,
+  "remote_token_usage": null,
   "runtime": {
     "fastapi": "0.128.2",
     "pydantic": "2.11.7",
     "python": "3.11.9"
   },
-  "schema_version": "1"
+  "schema_version": "1",
+  "semantic_citation_validation": {
+    "rejected_or_contradictory_findings": 0,
+    "valid_citation_rate": null,
+    "validated_findings": 0
+  }
 }

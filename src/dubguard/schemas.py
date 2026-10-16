@@ -241,6 +241,7 @@ class SemanticAssessment(Model):
     response_valid: bool = False
     latency_ms: float | None = Field(default=None, ge=0)
     attempts: int | None = Field(default=None, ge=0)
+    usage: dict[str, int] | None = None
 
     @model_validator(mode="after")
     def provenance(self):
@@ -259,7 +260,7 @@ class ReviewResult(Model):
     script_revision: str
     policy_id: str
     policy_revision: str
-    engine_version: str = "0.2.0"
+    engine_version: str = "0.3.0"
     mode: Literal["deterministic", "hybrid"] = "deterministic"
     semantic: SemanticAssessment | None = None
     safety_notice: str = "Review aid only. PASS_CANDIDATE is not safety certification or release approval."

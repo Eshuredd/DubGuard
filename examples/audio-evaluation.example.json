@@ -1,0 +1,21 @@
+{
+  "schema_version": "1",
+  "cases": [
+    {
+      "id": "replace-with-human-adjudicated-case-id",
+      "category": "acoustic_confusion",
+      "split": "development",
+      "audio_path": "/absolute/path/to/human-verified-recording.wav",
+      "audio_sha256": "replace-with-64-lowercase-hex-sha256",
+      "human_verified_by": "authenticated-or-documented-adjudicator-id",
+      "adjudication_note": "Document who listened to the original audio and how the spoken ground truth was checked.",
+      "spoken_ground_truth": [
+        {"text": "Wait 50 minutes before restarting.", "instruction_id": "step-1", "start_seconds": null, "end_seconds": null}
+      ],
+      "protected_terms": ["15", "50"],
+      "label": "CRITICAL",
+      "policy": {"script": {}, "policy": {}},
+      "confirmed_asr_alignment": {}
+    }
+  ]
+}

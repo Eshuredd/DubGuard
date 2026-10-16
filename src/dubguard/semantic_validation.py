@@ -14,16 +14,18 @@ from .text import normalize
 class ApprovedReference(Model):
     instruction_id: Identifier
     quote: str = Field(min_length=1, max_length=20000)
-    start_char: int = Field(ge=0)
-    end_char: int = Field(ge=0)
+    # Legacy offsets are accepted only to validate older responses. New prompts
+    # ask for quotes; source offsets always come from this module.
+    start_char: int | None = Field(default=None, ge=0)
+    end_char: int | None = Field(default=None, ge=0)
 
 
 class ObservedReference(Model):
     instruction_id: Identifier
     segment_id: Identifier
     quote: str = Field(min_length=1, max_length=20000)
-    start_char: int = Field(ge=0)
-    end_char: int = Field(ge=0)
+    start_char: int | None = Field(default=None, ge=0)
+    end_char: int | None = Field(default=None, ge=0)
 
 
 class DraftFinding(Model):
@@ -51,6 +53,21 @@ KIND_FOR_CONSTRAINT = {
     "numeric": "NUMERIC_LIMIT", "polarity": "POLARITY",
     "warning": "WARNING_POLICY", "sequence": "PROCEDURE_ORDER",
 }
+
+
+def _source_offset(source: str, reference: ApprovedReference | ObservedReference) -> tuple[int, int]:
+    """Find one exact citation; never pick an arbitrary repeated occurrence."""
+    start = source.find(reference.quote)
+    if start < 0:
+        raise ValueError("quote is absent from cited source")
+    if source.find(reference.quote, start + 1) >= 0:
+        raise ValueError("quote occurs more than once in cited source")
+    end = start + len(reference.quote)
+    if (reference.start_char is None) != (reference.end_char is None):
+        raise ValueError("partial legacy offsets")
+    if reference.start_char is not None and (reference.start_char, reference.end_char) != (start, end):
+        raise ValueError("legacy offsets conflict with source")
+    return start, end
 
 
 def _matching_segment(segment: TranscriptSegment, instruction_id: str,
@@ -82,11 +99,9 @@ def _validate_finding(raw: dict[str, Any], request: VerificationRequest) -> Sema
         if reference.instruction_id not in allowed_ids:
             raise ValueError("approved evidence points outside requirement")
         instruction = instructions[reference.instruction_id]
-        if instruction.text[reference.start_char:reference.end_char] != reference.quote:
-            raise ValueError("approved quote or offsets do not match source")
+        start, end = _source_offset(instruction.text, reference)
         approved.append(EvidenceSpan(source="approved", instruction_id=reference.instruction_id,
-                                     text=reference.quote, start_char=reference.start_char,
-                                     end_char=reference.end_char))
+                                     text=reference.quote, start_char=start, end_char=end))
     if draft.instruction_id not in {span.instruction_id for span in approved}:
         raise ValueError("finding lacks approved evidence for its instruction")
     for reference in draft.observed_evidence:
@@ -97,11 +112,10 @@ def _validate_finding(raw: dict[str, Any], request: VerificationRequest) -> Sema
             raise ValueError("unknown transcript segment ID")
         if not _matching_segment(segment, reference.instruction_id, request):
             raise ValueError("segment does not correspond to cited instruction")
-        if segment.text[reference.start_char:reference.end_char] != reference.quote:
-            raise ValueError("observed quote or offsets do not match source")
+        start, end = _source_offset(segment.text, reference)
         observed.append(EvidenceSpan(source="observed", instruction_id=reference.instruction_id,
                                      segment_id=reference.segment_id, text=reference.quote,
-                                     start_char=reference.start_char, end_char=reference.end_char,
+                                     start_char=start, end_char=end,
                                      start_seconds=segment.start_seconds, end_seconds=segment.end_seconds,
                                      timing_scope="segment" if segment.start_seconds is not None else None))
     if draft.verdict == "EQUIVALENT" and not observed:
@@ -141,6 +155,8 @@ def parse_semantic_json(content: str, request: VerificationRequest) -> tuple[str
                                         explanation="A model finding had an invalid requirement, source reference, quote, or offset."))
     if draft.verdict == "DEVIATION" and not any(f.verdict == "DEVIATION" for f in valid):
         issues.append(SemanticIssue(explanation="The model reported a deviation without a validated supporting finding."))
+    if draft.verdict == "DEVIATION" and any(f.verdict == "EQUIVALENT" for f in valid):
+        issues.append(SemanticIssue(explanation="The model's overall deviation conflicts with an equivalent finding."))
     if draft.verdict == "EQUIVALENT" and any(f.verdict != "EQUIVALENT" for f in valid):
         issues.append(SemanticIssue(explanation="The model's overall verdict conflicts with a finding."))
     if draft.verdict == "EQUIVALENT" and issues:

@@ -24,6 +24,11 @@ def test_hybrid_switch_alone_never_calls_provider():
     assert report["remote_request_attempts"] == 0
 
 
+def test_policy_baseline_requires_remote_opt_in():
+    with pytest.raises(ValueError, match="policy baseline"):
+        evaluate(policy_baseline=True)
+
+
 def test_remote_paths_compare_same_explicit_subset_with_stub():
     class ContractStub:
         real_inference_available = True
@@ -48,3 +53,28 @@ def test_remote_paths_compare_same_explicit_subset_with_stub():
         assert report["paths"][name]["metrics"]["total"] == 2
     assert report["paths"]["D_basic_llm"]["status"] == "measured"
     assert report["paths"]["C_hybrid"]["status"] == "measured"
+
+
+def test_optional_policy_baseline_uses_same_selected_cases():
+    class ContractStub:
+        real_inference_available = True
+        calls = 0
+        def result(self):
+            self.calls += 1
+            return SemanticAssessment(provider="in-memory-contract", status="real",
+                                      verdict="UNRESOLVED", explanation="fixture",
+                                      real_inference=True, response_valid=True,
+                                      call_id=f"fixture-{self.calls}", model="fixture-model",
+                                      attempts=1, usage={"total_tokens": 10})
+        def verify_basic(self, request):
+            return self.result()
+        def verify_policy_baseline(self, request):
+            return self.result()
+        def verify(self, request):
+            return self.result()
+    stub = ContractStub()
+    report = evaluate(hybrid=True, remote=True, max_cases=1,
+                      policy_baseline=True, provider=stub)
+    assert stub.calls == report["remote_request_attempts"] == 3
+    assert report["paths"]["E_policy_llm"]["status"] == "measured"
+    assert report["remote_token_usage"]["total_tokens"] == 30

@@ -64,7 +64,7 @@ def test_real_transport_shape_and_valid_suspected_finding(case_request):
     assert body["messages"][0]["role"] == "system"
     assert "power-state" in body["messages"][1]["content"]
     source = json.loads(body["messages"][1]["content"].split("\n", 1)[1])
-    assert source["citation_templates"]["approved"][0]["end_char"] == len(request.script.instructions[0].text)
+    assert "start_char" not in source["citation_templates"]["approved"][0]
     assert source["citation_templates"]["observed"][0]["quote"] == request.transcript.segments[0].text
     assert result.decision == "REVIEW_REQUIRED"
     assert result.semantic.status == "real"
@@ -168,6 +168,21 @@ def test_deterministic_violation_survives_model_equivalence(case_request):
                     provider=provider_with(lambda _: httpx.Response(200, json=envelope(payload))))
     assert result.decision == "CRITICAL_DEVIATION"
     assert any(f.rule_id == "POLARITY.REVERSED" for f in result.findings)
+
+
+def test_policy_prompted_llm_baseline_is_diagnostic(case_request):
+    request = case_request("A01")
+    seen = []
+    def handler(http_request):
+        seen.append(json.loads(http_request.content))
+        return httpx.Response(200, json={**envelope({"verdict": "EQUIVALENT", "explanation": "Looks the same."}),
+                                         "usage": {"prompt_tokens": 5, "completion_tokens": 3,
+                                                   "total_tokens": 8}})
+    assessment = provider_with(handler).verify_policy_baseline(request)
+    assert assessment.status == "real"
+    assert assessment.usage["total_tokens"] == 8
+    assert "policy" in seen[0]["messages"][1]["content"]
+    assert "citation_templates" not in seen[0]["messages"][1]["content"]
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 500])

@@ -11,6 +11,7 @@ Local paths are reproducible development results. Remote paths, if measured, use
 | A_normalized_diff | 60 | 100.00% | 53.33% | 66.67% | 11.67% | 21 | 0 |
 | B_policy_engine | 60 | 91.67% | 100.00% | 0.00% | 23.33% | 2 | 0 |
 | D_basic_llm (skipped) | — | — | — | — | — | — | — |
+| E_policy_llm (skipped) | — | — | — | — | — | — | — |
 | C_hybrid (skipped) | — | — | — | — | — | — | — |
 
 ## Definitions and scope
@@ -171,6 +172,10 @@ Label counts: {"ACCEPTABLE": 24, "CRITICAL": 24, "UNRESOLVED": 12}.
 
 Basic LLM baseline requires explicit remote opt-in and real inference.
 
+## E_policy_llm
+
+Policy-prompted LLM baseline requires explicit capped remote opt-in.
+
 ## C_hybrid
 
 Real inference is unavailable or was not requested. No mock/LLM/AMD performance result is claimed.
@@ -179,5 +184,5 @@ Real inference is unavailable or was not requested. No mock/LLM/AMD performance 
 
 - Small, curated synthetic development set, not a held-out industrial benchmark.
 - Instruction mappings and transcript completeness are supplied review metadata.
-- No audio transcription or industrial safety approval is demonstrated.
-- Basic LLM verdicts are diagnostic evaluation outputs, not production approval decisions.
+- This text-only corpus does not measure the integrated audio transcription path or industrial safety approval.
+- Basic and policy-prompted LLM verdicts are diagnostic evaluation outputs, not production approval decisions.
