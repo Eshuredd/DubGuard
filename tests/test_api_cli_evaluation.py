@@ -32,7 +32,8 @@ def test_api_rejects_invalid_input(case_request):
 
 def test_api_hybrid_disabled_requires_review(case_request, monkeypatch):
     monkeypatch.setenv("DUBGUARD_SEMANTIC_PROVIDER", "disabled")
-    response = client.post("/verify?mode=hybrid", json=case_request("A01").model_dump(mode="json"))
+    monkeypatch.setenv("DUBGUARD_REVIEW_TOKENS_JSON", '{"tester":"test-only-long-reviewer-token"}')
+    response = client.post("/verify?mode=hybrid", headers={"Authorization":"Bearer test-only-long-reviewer-token"}, json=case_request("A01").model_dump(mode="json"))
     assert response.json()["decision"] == "REVIEW_REQUIRED"
 
 

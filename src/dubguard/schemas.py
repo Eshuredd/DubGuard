@@ -260,7 +260,7 @@ class ReviewResult(Model):
     script_revision: str
     policy_id: str
     policy_revision: str
-    engine_version: str = "0.4.0"
+    engine_version: str = "0.5.0"
     mode: Literal["deterministic", "hybrid"] = "deterministic"
     semantic: SemanticAssessment | None = None
     safety_notice: str = "Review aid only. PASS_CANDIDATE is not safety certification or release approval."

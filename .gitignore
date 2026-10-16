@@ -10,3 +10,8 @@ dist/
 .env.*
 !.env.example
 .DS_Store
+
+frontend/node_modules/
+frontend/playwright-report/
+frontend/test-results/
+frontend/*.tsbuildinfo

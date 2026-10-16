@@ -13,16 +13,19 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import Field
 
 from .alignment import AlignmentRun, apply_confirmed_alignment, propose_alignment
-from .audio import (AudioArtifact, AudioError, AudioStore, FasterWhisperProvider,
+from .audio import (AudioArtifact, AudioError, AudioStore, FasterWhisperProvider, AUDIO_MIME,
                     TranscriptionResult, transcribe_artifact)
 from .acoustic import TargetedRecheckResult, targeted_recheck
 from .engine import approved_evidence, observed_evidence, verify
 from .providers import _load_project_env
 from .schemas import (Decision, Finding, FindingStatus, Model, ReviewResult,
                       ScriptPolicy, VerificationRequest, HumanTranscriptInput, VerifiedTranscriptEvidence)
+
+from .ui_contracts import WorkflowView, WorkflowSummary, PolicyRecord
 
 router = APIRouter(prefix="/review", tags=["human-review"])
 
@@ -97,6 +100,7 @@ class ReviewStore:
             # Additive migration: preserve all legacy evidence and approval history.
             for table, column, definition in (
                 ("workflows", "evidence_record_id", "TEXT"),
+                ("workflows", "acoustic_resolution_record_id", "TEXT"),
                 ("workflows", "revision", "INTEGER NOT NULL DEFAULT 0"),
                 ("approvals", "evidence_record_id", "TEXT"),
                 ("approvals", "verification_record_id", "TEXT"),
@@ -174,7 +178,7 @@ class ReviewStore:
         return {key: workflow[key] for key in (
             "policy_record_id", "audio_record_id", "transcription_record_id",
             "alignment_record_id", "confirmed_alignment_record_id",
-            "acoustic_record_id", "evidence_record_id", "revision")}
+            "acoustic_record_id", "evidence_record_id", "acoustic_resolution_record_id", "revision")}
 
     @staticmethod
     def _read(db, identity: str, kind: str) -> dict:
@@ -194,7 +198,8 @@ class ReviewStore:
                    state: str, reviewer_id: str, expected_revision: int | None = None) -> None:
         kinds = {"transcription_record_id": "transcription", "alignment_record_id": "alignment",
                  "confirmed_alignment_record_id": "confirmed_alignment", "acoustic_record_id": "acoustic",
-                 "verification_record_id": "verification", "evidence_record_id": "verified_evidence"}
+                 "verification_record_id": "verification", "evidence_record_id": "verified_evidence",
+                 "acoustic_resolution_record_id": "acoustic_resolution"}
         if field not in kinds:
             raise ValueError("invalid workflow record field")
         with self._connect() as db:
@@ -214,6 +219,8 @@ class ReviewStore:
             else:
                 # Every input mutation invalidates prior run decisions. Raw records remain immutable.
                 clear = ",verification_record_id=NULL"
+                if field != "acoustic_resolution_record_id":
+                    clear += ",acoustic_resolution_record_id=NULL"
                 if field == "transcription_record_id":
                     clear += ",alignment_record_id=NULL,confirmed_alignment_record_id=NULL,acoustic_record_id=NULL,evidence_record_id=NULL"
                 if field == "confirmed_alignment_record_id":
@@ -440,7 +447,7 @@ async def upload_audio(file: UploadFile = File(...), identity: str = Depends(rev
     data = await file.read(limit + 1)
     await file.close()
     try:
-        artifact = AudioStore(_root() / "artifacts").ingest(data)
+        artifact = await run_in_threadpool(AudioStore(_root() / "artifacts").ingest, data, content_type=file.content_type)
     except AudioError as exc:
         raise HTTPException(422, str(exc)) from None
     store = _store()
@@ -456,7 +463,7 @@ def get_audio(record_id: str, identity: str = Depends(reviewer)):
     data = path.read_bytes() if path.exists() else b""
     if sha256(data).hexdigest() != artifact.sha256:
         raise HTTPException(404, "Original audio is missing or changed")
-    return Response(content=data, media_type="audio/wav" if artifact.format == "wav" else "audio/mpeg")
+    return Response(content=data, media_type=AUDIO_MIME[artifact.format], headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/artifacts/{record_id}")
@@ -497,7 +504,7 @@ def start_transcription(workflow_id: str, tasks: BackgroundTasks, identity: str 
     return {"state": "QUEUED", "note": "In-process background task; use an external queue for durable deployment."}
 
 
-@router.get("/workflows/{workflow_id}")
+@router.get("/workflows/{workflow_id}", response_model=WorkflowView)
 def workflow_details(workflow_id: str, identity: str = Depends(reviewer)):
     store = _store()
     details = _handle_key(store.details, workflow_id)
@@ -509,6 +516,7 @@ def workflow_details(workflow_id: str, identity: str = Depends(reviewer)):
                         ("evidence_record_id", "verified_evidence"),
                         ("confirmed_alignment_record_id", "confirmed_alignment"),
                         ("acoustic_record_id", "acoustic"),
+                        ("acoustic_resolution_record_id", "acoustic_resolution"),
                         ("verification_record_id", "verification")):
         if workflow[field]:
             details[kind] = store.record(workflow[field], kind)
@@ -620,7 +628,18 @@ def _run_verification(workflow_id: str, identity: str, hybrid: bool) -> tuple[st
         instructions = {i.id: i for i in policy.script.instructions}
         primary_segments = {s.id: s for s in transcription.transcript.segments}
         secondary_segments = {s.id: s for s in acoustic.secondary_transcript.segments}
+        resolved = set()
+        if workflow["acoustic_resolution_record_id"]:
+            resolution = store.record(workflow["acoustic_resolution_record_id"], "acoustic_resolution")
+            if (resolution["evidence_record_id"] == workflow["evidence_record_id"] and
+                    resolution["acoustic_record_id"] == workflow["acoustic_record_id"]):
+                resolved = set(resolution["requirement_ids"])
+        for requirement_id in resolved:
+            result.findings.append(Finding(rule_id="ACOUSTIC.HUMAN_RESOLVED", status=FindingStatus.SATISFIED,
+                constraint_id=requirement_id, explanation="Authenticated listener resolved acoustic evidence against the linked human transcript revision. Original hypotheses remain in history."))
         for disagreement in acoustic.assessment.disagreements:
+            if disagreement.requirement_id in resolved:
+                continue
             spans = [observed_evidence(primary_segments[disagreement.primary_segment_id], disagreement.instruction_id)]
             if disagreement.secondary_segment_id:
                 spans.append(observed_evidence(secondary_segments[disagreement.secondary_segment_id],
@@ -631,6 +650,8 @@ def _run_verification(workflow_id: str, identity: str, hybrid: bool) -> tuple[st
                 approved=[approved_evidence(instructions[disagreement.instruction_id])], observed=spans,
                 explanation=disagreement.explanation, provider=acoustic.secondary_provider))
         for requirement_id in acoustic.assessment.unresolved_requirement_ids:
+            if requirement_id in resolved:
+                continue
             constraint = next(c for c in policy.policy.constraints if c.id == requirement_id)
             if constraint.kind == "sequence":
                 continue
@@ -640,7 +661,7 @@ def _run_verification(workflow_id: str, identity: str, hybrid: bool) -> tuple[st
                 explanation="Independent audio recheck lacks a reliable mapped hypothesis; listen to the original audio.",
                 provider=acoustic.secondary_provider))
         if result.decision != Decision.CRITICAL_DEVIATION and any(
-                f.rule_id.startswith("ACOUSTIC.") for f in result.findings):
+                f.rule_id.startswith("ACOUSTIC.") and f.status == FindingStatus.UNRESOLVED for f in result.findings):
             result.decision = Decision.REVIEW_REQUIRED
     record_id = store.add_record("verification", result.model_dump(mode="json"))
     _handle_key(store.set_record, workflow_id, "verification_record_id", record_id, "IN_REVIEW", identity, expected_revision=workflow["revision"])
@@ -714,3 +735,65 @@ def verify_spoken_transcript(workflow_id: str, payload: HumanTranscriptInput,
     _handle_key(store.set_record, workflow_id, "evidence_record_id", record_id, "IN_REVIEW", identity,
                 expected_revision=payload.expected_revision)
     return {"record_id": record_id, "evidence": evidence, "verification_required": True}
+
+
+@router.get("/workflows", response_model=list[WorkflowSummary])
+def list_workflows(limit: int = 50, offset: int = 0, identity: str = Depends(reviewer)):
+    if not 1 <= limit <= 100 or offset < 0:
+        raise HTTPException(422, "Invalid pagination")
+    store = _store()
+    with store._connect() as db:
+        rows = db.execute("SELECT * FROM workflows ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?", (limit, offset)).fetchall()
+        return [{"workflow": dict(row), "policy": store._read(db, row["policy_record_id"], "approved_policy"),
+                 "audio": store._read(db, row["audio_record_id"], "audio_artifact")} for row in rows]
+
+
+@router.get("/policy-records", response_model=list[PolicyRecord])
+def list_policy_records(limit: int = 100, identity: str = Depends(reviewer)):
+    if not 1 <= limit <= 100:
+        raise HTTPException(422, "Invalid limit")
+    with _store()._connect() as db:
+        rows = db.execute("SELECT * FROM records WHERE kind IN ('policy_draft','approved_policy') ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+    return [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
+
+
+@router.get("/workflows/{workflow_id}/export", response_model=WorkflowView)
+def export_workflow(workflow_id: str, identity: str = Depends(reviewer)):
+    return workflow_details(workflow_id, identity)
+
+
+class AcousticResolutionInput(Model):
+    expected_revision: int = Field(ge=0)
+    evidence_record_id: str
+    acoustic_record_id: str
+    requirement_ids: list[str] = Field(min_length=1)
+    listened_to_original: Literal[True]
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+@router.post("/workflows/{workflow_id}/acoustic-resolution")
+def resolve_acoustic(workflow_id: str, payload: AcousticResolutionInput, identity: str = Depends(reviewer)):
+    store = _store()
+    workflow = _handle_key(store.workflow, workflow_id)
+    if (workflow["evidence_record_id"] != payload.evidence_record_id or
+            workflow["acoustic_record_id"] != payload.acoustic_record_id):
+        raise HTTPException(409, "Resolution must reference current human and acoustic evidence")
+    evidence = VerifiedTranscriptEvidence.model_validate(_handle_key(store.record, payload.evidence_record_id, "verified_evidence"))
+    acoustic = TargetedRecheckResult.model_validate(_handle_key(store.record, payload.acoustic_record_id, "acoustic"))
+    policy = ScriptPolicy.model_validate(store.record(workflow["policy_record_id"], "approved_policy"))
+    affected = {d.requirement_id for d in acoustic.assessment.disagreements} | set(acoustic.assessment.unresolved_requirement_ids)
+    if not set(payload.requirement_ids) <= affected or len(set(payload.requirement_ids)) != len(payload.requirement_ids):
+        raise HTTPException(422, "Resolve only existing unique acoustic requirement IDs")
+    from .engine import uncertainty
+    request = VerificationRequest(**policy.model_dump(mode="json"), transcript=evidence.transcript)
+    for requirement_id in payload.requirement_ids:
+        constraint = next(c for c in policy.policy.constraints if c.id == requirement_id)
+        ids = constraint.instruction_ids if constraint.kind == "sequence" else [constraint.instruction_id]
+        for instruction_id in ids:
+            segments = [s for s in evidence.transcript.segments if s.instruction_id == instruction_id]
+            if len(segments) != 1 or uncertainty(segments[0], request) or evidence.transcript.completeness != "complete":
+                raise HTTPException(409, "Each acoustic requirement needs complete, unambiguous, mapped human evidence")
+    record_id = store.add_record("acoustic_resolution", {**payload.model_dump(mode="json"), "reviewer_id": identity, "created_at": _now()})
+    _handle_key(store.set_record, workflow_id, "acoustic_resolution_record_id", record_id,
+                "IN_REVIEW", identity, expected_revision=payload.expected_revision)
+    return {"record_id": record_id, "verification_required": True}

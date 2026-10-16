@@ -185,7 +185,7 @@ def evaluate(*, hybrid: bool = False, provider: SemanticProvider | None = None,
     valid_citations = sum(len(r["result"]["semantic"].get("findings", [])) for r in rows_c)
     invalid_citations = sum(len(r["result"]["semantic"].get("issues", [])) for r in rows_c)
     return {
-        "schema_version": "1", "engine_version": "0.4.0", "dataset_sha256": fingerprint,
+        "schema_version": "1", "engine_version": "0.5.0", "dataset_sha256": fingerprint,
         "code_sha256": {name: sha256(package_root.joinpath(name).read_bytes()).hexdigest() for name in code_files},
         "runtime": {"python": platform.python_version(), **{p: metadata.version(p) for p in ("pydantic", "fastapi")}},
         "dataset": {"count": len(cases), "profiles": len(profiles),

@@ -89,7 +89,7 @@ class ASRProvider(Protocol):
 class FasterWhisperProvider:
     name = "faster-whisper"
 
-    def __init__(self, model_id: str | None = None, *, local_files_only: bool = False):
+    def __init__(self, model_id: str | None = None, *, local_files_only: bool = True):
         self.model_id = model_id or os.getenv("DUBGUARD_WHISPER_MODEL", "tiny.en")
         self.local_files_only = local_files_only
         self._model = None
@@ -134,7 +134,33 @@ def _format(data: bytes) -> str:
         return "wav"
     if data[:3] == b"ID3" or (len(data) >= 2 and data[0] == 0xff and data[1] & 0xe0 == 0xe0):
         return "mp3"
-    raise AudioError("Only valid-looking WAV or MP3 files are accepted")
+    if data[:4] == b"\x1a\x45\xdf\xa3" and b"webm" in data[:4096]:
+        return "webm"
+    if len(data) >= 12 and data[4:8] == b"ftyp":
+        return "mp4"
+    raise AudioError("Supported audio containers: WAV, MP3, WebM/Opus and MP4/AAC")
+
+
+AUDIO_MIME = {"wav": "audio/wav", "mp3": "audio/mpeg", "webm": "audio/webm", "mp4": "audio/mp4"}
+
+
+def _probe(path: Path, fmt: str) -> None:
+    """Inspect actual streams, not browser filenames or MIME claims."""
+    try:
+        import av
+        with av.open(str(path), options={"protocol_whitelist": "file,pipe"}) as container:
+            audio = list(container.streams.audio)
+            if len(audio) != 1 or len(container.streams.video):
+                raise AudioError("Exactly one audio stream and no video are required")
+            codec = audio[0].codec_context.name
+            if fmt == "webm" and codec != "opus":
+                raise AudioError("WebM recording must contain Opus audio")
+            if fmt == "mp4" and codec != "aac":
+                raise AudioError("MP4 recording must contain AAC audio")
+    except AudioError:
+        raise
+    except Exception as exc:
+        raise AudioError("Audio stream probing failed; check format and local audio dependencies") from exc
 
 
 @dataclass
@@ -145,11 +171,17 @@ class AudioStore:
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.root.chmod(0o700)
 
-    def ingest(self, data: bytes) -> AudioArtifact:
+    def ingest(self, data: bytes, *, content_type: str | None = None, max_bytes: int | None = None, max_seconds: int | None = None) -> AudioArtifact:
         maximum = _max_int("DUBGUARD_MAX_UPLOAD_BYTES", 25_000_000, 250_000_000)
+        maximum = min(maximum, max_bytes) if max_bytes else maximum
         if not data or len(data) > maximum:
             raise AudioError("Audio is empty or exceeds the configured upload limit")
         fmt = _format(data)
+        claimed = (content_type or "").split(";")[0].lower()
+        aliases = {"audio/x-wav": "audio/wav", "audio/mp3": "audio/mpeg", "audio/x-m4a": "audio/mp4"}
+        claimed = aliases.get(claimed, claimed)
+        if claimed not in {"", "application/octet-stream", AUDIO_MIME[fmt]}:
+            raise AudioError("Claimed MIME type does not match the actual audio container")
         digest = sha256(data).hexdigest()
         target = self.path_for(digest, fmt)
         created = not target.exists()
@@ -164,13 +196,15 @@ class AudioStore:
         if sha256(target.read_bytes()).hexdigest() != digest:
             raise AudioError("Stored original audio hash mismatch")
         try:
+            _probe(target, fmt)
             with tempfile.TemporaryDirectory(prefix="dubguard-audio-") as directory:
                 decoded = Path(directory) / "decoded.wav"
-                _decode(target, decoded)
+                _decode(target, decoded, max_seconds=max_seconds)
                 with wave.open(str(decoded), "rb") as stream:
                     duration = stream.getnframes() / stream.getframerate()
                     rate = stream.getframerate()
             limit = _max_int("DUBGUARD_MAX_AUDIO_SECONDS", 1200, 86400)
+            limit = min(limit, max_seconds) if max_seconds else limit
             if not 0 < duration <= limit:
                 raise AudioError("Audio duration is empty or exceeds the configured limit")
         except Exception:
@@ -182,14 +216,15 @@ class AudioStore:
                              duration_seconds=duration, sample_rate=rate)
 
     def path_for(self, digest: str, fmt: str) -> Path:
-        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest) or fmt not in {"wav", "mp3"}:
+        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest) or fmt not in AUDIO_MIME:
             raise AudioError("Invalid audio artifact identity")
         return self.root / f"{digest}.{fmt}"
 
 
-def _decode(source: Path, target: Path) -> None:
+def _decode(source: Path, target: Path, *, max_seconds: int | None = None) -> None:
     command = [_ffmpeg(), "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
-               "-i", str(source), "-vn", "-ac", "1", "-ar", str(SAMPLE_RATE),
+               "-protocol_whitelist", "file,pipe", "-i", str(source), "-t",
+               str(min(_max_int("DUBGUARD_MAX_AUDIO_SECONDS", 1200, 86400), max_seconds or 86400) + 1), "-map", "0:a:0", "-vn", "-ac", "1", "-ar", str(SAMPLE_RATE),
                "-c:a", "pcm_s16le", str(target)]
     try:
         result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,

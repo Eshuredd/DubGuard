@@ -1,9 +1,11 @@
 # DubGuard — Industrial Narration Review
 
-Phases 1, 2A, 2A.1, 2B and Phase 2C evidence integrity for AMD Developer Hackathon
+Phases 1–3: evidence integrity and an interactive reviewer application for AMD Developer Hackathon
 Act III, **Intelligent Industry**. The deterministic engine compares approved
 English single-speaker narration under reviewer-defined constraints; optional
-local audio transcription and a versioned human review API now surround it.
+local audio transcription, a versioned human review API, and a React reviewer application now surround it.
+
+See [Phase 3 delivery report](PHASE3_REPORT.md) and [frontend setup](frontend/README.md).
 
 **PASS_CANDIDATE is not safety certification, release approval, or a guarantee of
 semantic equivalence.** Ambiguous evidence requires human review. ASR is provisional;
@@ -49,10 +51,10 @@ curl --fail 'http://127.0.0.1:8000/evaluation/reports?format=markdown'
 Interactive API schemas are at [localhost /docs](http://127.0.0.1:8000/docs).
 `POST /validate` validates a `{script, policy}` body. `POST /verify` validates and
 analyzes `{script, policy, transcript}`; `?mode=hybrid` requests advisory semantic
-verification. Invalid schemas return HTTP 422. `GET /evaluation/reports` reruns
+verification and requires reviewer bearer authentication. Invalid schemas return HTTP 422. `GET /evaluation/reports` reruns
 only local paths A and B; GET never starts remote inference. This is a local
 development service. The new `/review/*` routes require configured bearer-token
-authentication; the legacy `/validate` and `/verify` routes remain unchanged.
+authentication; local `/validate` and deterministic `/verify` remain public development endpoints.
 
 ## What is implemented
 
@@ -69,14 +71,48 @@ authentication; the legacy `/validate` and `/verify` routes remain unchanged.
 | AMD Token Factory provider | Real OpenAI-compatible chat completions via HTTPS with bounded retries/timeouts and source-validated JSON |
 | Real semantic evaluation paths | Prepared as opt-in, capped, separate basic LLM and policy-hybrid paths; local reports skip them |
 | Timestamped ASR segment input | Implemented contract and optional local CPU Whisper adapter; ASR output is provisional |
-| Audio intake and review | WAV/MP3 intake, FFmpeg normalization, complete-file chunking/coverage, SQLite review API |
+| Audio intake and review | WAV/MP3/WebM Opus/MP4 AAC intake, FFmpeg normalization, complete-file chunking/coverage, SQLite review API |
 | Acoustic recheck | Independent local model hook with protected-term disagreement; requires a separately installed secondary model |
 | MiMo audio | Documented opt-in probe scaffold; no live audio call or quality result yet |
 | CPU Dockerfile | Provided; container build/run not verified because the local daemon is unavailable |
+| React reviewer application | Quick Test, browser recording, authenticated full review, evidence correction, run-bound signoff and export |
+| Browser capture | Chrome MediaRecorder exercised with a synthetic device; Safari MIME selection implemented but not manually verified |
 
-No frontend, multilingual dubbing, video editing, model training, automatic
-certification, or automatic release approval is included. The optional `tiny.en`
-ASR model is downloaded on first transcription unless supplied locally.
+Multilingual dubbing, video editing, model training, automatic certification, and
+automatic release approval are excluded. ASR requires an already cached model or
+local model directory; missing models fail visibly without automatic downloads.
+
+### Start the reviewer application
+
+Node.js 22.12+ and the audio dependencies above are required. Configure private
+environment variables as described under “Audio and human-review workflow”:
+`DUBGUARD_REVIEW_TOKENS_JSON`, `DUBGUARD_DATA_DIR`, and a cached
+`DUBGUARD_WHISPER_MODEL`. Quick Test additionally needs a separate random
+`DUBGUARD_DEMO_ACCESS_CODE` of at least 24 characters. Never reuse a reviewer token.
+
+Start the API using the uvicorn command above, then in another terminal:
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run dev
+```
+
+Open http://127.0.0.1:5173/test for Quick Test or /login for Full Review.
+The Vite server proxies /api to port 8000. Refresh/deep links are supported.
+Microphone permission is requested only after clicking Record narration; capture
+and submission are separate explicit actions. HTTPS or localhost is required.
+
+```bash
+npm --prefix frontend test
+npm --prefix frontend run build
+npm --prefix frontend run test:e2e
+npm --prefix frontend run generate:api
+```
+
+End-to-end tests require installed desktop Chrome and free ports 8000/5173.
+They use isolated temporary storage, generated test credentials and stub ASR,
+not your .env credentials. They do not establish recognition accuracy.
+See frontend/README.md for retention, format, and deployment details.
 
 ## Policy and evidence model
 
@@ -297,8 +333,8 @@ Keep human audio review and final approval outside the model.
 Install `requirements-audio.txt` for the bundled FFmpeg binary and the optional
 CPU `faster-whisper` adapter. The default `tiny.en` model is about 78 MB and was
 chosen for a local development smoke test, not industrial accuracy. Set
-`DUBGUARD_WHISPER_MODEL` to a local model path to avoid first-use downloading.
-WAV and MP3 are accepted by signature and decoded to 16 kHz mono PCM. Uploads
+`DUBGUARD_WHISPER_MODEL` to a cached model name or local model path; automatic downloads are disabled.
+WAV, MP3, WebM/Opus and MP4/AAC are accepted by signature and decoded to 16 kHz mono PCM. Uploads
 default to 25 MB and 20 minutes, configurable within bounded limits via `.env`.
 The original bytes are stored under a SHA-256 name in a private local directory;
 every read checks the hash. The filesystem is not cryptographically immutable.
@@ -314,7 +350,7 @@ For a local reviewer account, set a **unique random token** (24+ characters) in
 `DUBGUARD_REVIEW_TOKENS_JSON`, for example using an environment variable in your
 private shell or ignored `.env`. Never put real tokens in Git. The JSON shape is
 `{"reviewer-id":"random-secret-token"}`. The `/review/*` API uses Bearer tokens;
-the old verification API is intentionally unauthenticated local development API.
+deterministic verification remains a public local development API; hybrid calls require reviewer authentication.
 Configure `DUBGUARD_DATA_DIR` as a private writable path. In production, deploy
 behind HTTPS and replace this MVP shared-secret identity layer with your identity
 provider and durable job queue.
@@ -326,7 +362,7 @@ The review API sequence is:
    version with `POST /review/policy-drafts/{id}/revise`, then explicitly call
    `POST /review/policy-drafts/{id}/approve`. Approval records the authenticated
    reviewer as the policy and variant approver; draft author strings are not trusted.
-2. `POST /review/artifacts` as multipart form field `file` with a WAV/MP3, then
+2. `POST /review/artifacts` as multipart form field `file` with a WAV, MP3, WebM/Opus or MP4/AAC recording, then
    `POST /review/workflows` with `policy_record_id` and `audio_record_id`.
 3. `POST /review/workflows/{id}/transcribe` starts an in-process background job.
    Poll `GET /review/workflows/{id}` for the transcription and its coverage.
@@ -492,9 +528,10 @@ model; MiMo remains separate. MiMo accepts a real PCM WAV up to 30 seconds / 5 M
 (local limits), with documented base64 `input_audio`; it does not supply validated
 timestamps or ground truth. No remote benchmark or smoke call ran in Phase 2C.
 
-Before frontend work, collect/adjudicate these six recordings and authorize the
-bounded remote probes. Then build a review-only interface showing raw ASR,
-tentative alignment, human correction history, exact source audio, unresolved
-checks, and run-bound signoff. Production still needs durable jobs, stronger
-identity/roles and tamper-resistant audit storage. Acoustic disagreements remain
-blocking; this version has no per-disagreement human resolution endpoint.
+Phase 3 implements the reviewer interface and versioned acoustic resolution.
+A resolution requires listening attestation and exact current human transcript and
+acoustic evidence IDs; it preserves the disagreement and never removes a
+deterministic violation. Input changes invalidate resolution and verification.
+Collect/adjudicate the six real recordings and authorize bounded remote probes
+before making recognition-quality claims. Production still needs durable jobs,
+stronger identity/roles and tamper-resistant audit storage.

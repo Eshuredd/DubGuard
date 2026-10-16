@@ -1,0 +1,204 @@
+[
+  {
+    "id": "correct",
+    "title": "Correct instruction",
+    "description": "Read the approved instruction or try a changed word. This is a demonstration fixture, not organizational approval.",
+    "fixture": true,
+    "policy": {
+      "script": {
+        "id": "correct",
+        "revision": "1",
+        "instructions": [
+          {
+            "id": "step-1",
+            "text": "Switch the power off.",
+            "approved_variants": []
+          }
+        ]
+      },
+      "policy": {
+        "id": "correct-policy",
+        "revision": "1",
+        "approved_by": "demonstration-fixture",
+        "constraints": [
+          {
+            "kind": "polarity",
+            "approved_phrase": "off",
+            "reversed_phrase": "on",
+            "id": "protected-1",
+            "instruction_id": "step-1"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "fifteen-fifty",
+    "title": "15 versus 50",
+    "description": "Read the approved instruction or try a changed word. This is a demonstration fixture, not organizational approval.",
+    "fixture": true,
+    "policy": {
+      "script": {
+        "id": "fifteen-fifty",
+        "revision": "1",
+        "instructions": [
+          {
+            "id": "step-1",
+            "text": "Wait 15 minutes before restarting.",
+            "approved_variants": []
+          }
+        ]
+      },
+      "policy": {
+        "id": "fifteen-fifty-policy",
+        "revision": "1",
+        "approved_by": "demonstration-fixture",
+        "constraints": [
+          {
+            "kind": "numeric",
+            "id": "protected-1",
+            "instruction_id": "step-1"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "on-off",
+    "title": "On versus off",
+    "description": "Read the approved instruction or try a changed word. This is a demonstration fixture, not organizational approval.",
+    "fixture": true,
+    "policy": {
+      "script": {
+        "id": "on-off",
+        "revision": "1",
+        "instructions": [
+          {
+            "id": "step-1",
+            "text": "Switch the power off.",
+            "approved_variants": []
+          }
+        ]
+      },
+      "policy": {
+        "id": "on-off-policy",
+        "revision": "1",
+        "approved_by": "demonstration-fixture",
+        "constraints": [
+          {
+            "kind": "polarity",
+            "approved_phrase": "off",
+            "reversed_phrase": "on",
+            "id": "protected-1",
+            "instruction_id": "step-1"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "before-after",
+    "title": "Before versus after",
+    "description": "Read the approved instruction or try a changed word. This is a demonstration fixture, not organizational approval.",
+    "fixture": true,
+    "policy": {
+      "script": {
+        "id": "before-after",
+        "revision": "1",
+        "instructions": [
+          {
+            "id": "step-1",
+            "text": "Close the valve before starting the pump.",
+            "approved_variants": []
+          }
+        ]
+      },
+      "policy": {
+        "id": "before-after-policy",
+        "revision": "1",
+        "approved_by": "demonstration-fixture",
+        "constraints": [
+          {
+            "kind": "polarity",
+            "approved_phrase": "before",
+            "reversed_phrase": "after",
+            "id": "protected-1",
+            "instruction_id": "step-1"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "paraphrase",
+    "title": "Approved paraphrase",
+    "description": "Read the approved instruction or try a changed word. This is a demonstration fixture, not organizational approval.",
+    "fixture": true,
+    "policy": {
+      "script": {
+        "id": "paraphrase",
+        "revision": "1",
+        "instructions": [
+          {
+            "id": "step-1",
+            "text": "Switch the power off.",
+            "approved_variants": [
+              {
+                "text": "Turn the power off.",
+                "approved_by": "demonstration-fixture",
+                "reason": "Explicitly permitted wording for this recording exercise."
+              }
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "id": "paraphrase-policy",
+        "revision": "1",
+        "approved_by": "demonstration-fixture",
+        "constraints": [
+          {
+            "kind": "polarity",
+            "approved_phrase": "off",
+            "reversed_phrase": "on",
+            "id": "protected-1",
+            "instruction_id": "step-1"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "unclear",
+    "title": "Unclear speech",
+    "description": "Read the approved instruction or try a changed word. This is a demonstration fixture, not organizational approval.",
+    "fixture": true,
+    "policy": {
+      "script": {
+        "id": "unclear",
+        "revision": "1",
+        "instructions": [
+          {
+            "id": "step-1",
+            "text": "Switch the power off.",
+            "approved_variants": []
+          }
+        ]
+      },
+      "policy": {
+        "id": "unclear-policy",
+        "revision": "1",
+        "approved_by": "demonstration-fixture",
+        "constraints": [
+          {
+            "kind": "polarity",
+            "approved_phrase": "off",
+            "reversed_phrase": "on",
+            "id": "protected-1",
+            "instruction_id": "step-1"
+          }
+        ]
+      }
+    }
+  }
+]
