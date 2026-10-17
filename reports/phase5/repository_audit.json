@@ -1,0 +1,21 @@
+{
+  "audited_commit": "c8b688d77a7c8f34f74f1d5ab89e9d8d8564753a",
+  "fetched_main": "c8b688d77a7c8f34f74f1d5ab89e9d8d8564753a",
+  "initial_worktree_clean": true,
+  "live_reports": [
+    {
+      "path": "reports/phase4/amd_smoke.json",
+      "committed": true,
+      "sha256": "a5845736e58ade933ec2a712e9672c4d66f470cda61eb663296cfa57d1d2180e",
+      "configured_credentials_found": false,
+      "credential_fields_found": false
+    },
+    {
+      "path": "reports/phase4/amd_smoke_inspection.json",
+      "committed": true,
+      "sha256": "0cfc6a3212bf5bfd8c1fcdae708696cbf3241190fdf58f9f227fa94a14d29a51",
+      "configured_credentials_found": false,
+      "credential_fields_found": false
+    }
+  ]
+}

@@ -144,7 +144,12 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
   await expect(
     page.getByRole("heading", { name: "AMD semantic findings" }),
   ).toBeVisible();
-  await expect(page.getByText(/playwright-mock-no-real-AMD/)).toBeVisible();
+  await expect(
+    page.getByText(/Returned model: playwright-mock-no-real-AMD/),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/Analyzed mode: AMD Semantic Review/),
+  ).toBeVisible();
   await expect(page.getByText(/1 HTTP attempts/)).toBeVisible();
   await expect(
     page.getByText(/Mocked HTTP, not actual AMD inference/),

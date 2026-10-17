@@ -5,7 +5,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt requirements-audio.txt pyproject.toml ./
-RUN python -m pip install --no-cache-dir -r requirements-audio.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install --timeout 120 --retries 2 --progress-bar off -r requirements-audio.txt
 COPY src ./src
 RUN python -m pip install --no-cache-dir --no-deps . \
     && useradd --create-home --uid 10001 dubguard \

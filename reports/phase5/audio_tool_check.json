@@ -1,0 +1,17 @@
+{
+  "input": "Generated silence, not human speech",
+  "result": {
+    "artifact": {
+      "id": "7e28a155ec8ae58f8483a9f7dc8d8190173ded11c01b5f31e1c6f8ee629916c6",
+      "sha256": "7e28a155ec8ae58f8483a9f7dc8d8190173ded11c01b5f31e1c6f8ee629916c6",
+      "format": "wav",
+      "byte_size": 12844,
+      "duration_seconds": 0.4,
+      "sample_rate": 16000
+    },
+    "decode_validated": true,
+    "asr_performed": false,
+    "remote_calls": 0,
+    "note": "Container/decoding validity does not establish speech or ground truth. Quick Test has a stricter 10 MB / 60 second limit."
+  }
+}

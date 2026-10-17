@@ -9,6 +9,11 @@ substitute TTS or stub-ASR tests for these measurements. Do not operate machiner
 Phase 4 adds a hash/schema preflight below. Recordings and adjudication are still
 awaited; no accuracy metrics have been populated from the recording prompts.
 
+Phase 5's [physical microphone checklist](MICROPHONE_CHECKLIST.md) includes the
+complete Chrome protocol, format/hash/import commands and a human-readable report.
+`scripts/inspect_audio.py` decodes a file without inference;
+`scripts/render_audio_report.py` renders existing evaluation JSON without inference.
+
 | Case ID | Approved text | Recording prompt |
 |---|---|---|
 | correct | Switch the power off. | Read the approved text clearly. |

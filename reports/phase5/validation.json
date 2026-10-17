@@ -1,0 +1,22 @@
+{
+  "backend_passed": 305,
+  "frontend_unit_passed": 13,
+  "workflow_chrome_passed": 8,
+  "production_container_chrome_passed": 1,
+  "typecheck": "passed",
+  "production_build": "passed",
+  "host_and_container_pip_check": "passed",
+  "npm_production_audit_vulnerabilities": 0,
+  "container_build": "passed_after_package_download_timeout_fix",
+  "container_protocol": "passed",
+  "public_https": "not_verified",
+  "physical_microphone": "not_verified",
+  "human_speech_accuracy": "not_measured",
+  "amd_calls_phase5": 0,
+  "existing_env_unchanged": true,
+  "configured_secrets_found_in_json_receipts_or_built_js": false,
+  "short_description_characters": 210,
+  "long_description_characters": 1599,
+  "test_stack_stopped": true,
+  "test_volumes_retained": true
+}

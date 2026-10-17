@@ -31,11 +31,12 @@ human transcript evidence. A model opinion never releases a recording.
 ## Deployment and remaining gates
 
 Public URL: **not available or verified**. Secure single-server Docker/Compose/Caddy
-files and exact operator commands are in `DEPLOYMENT.md`. The current Docker daemon
-is unavailable, so Linux container build/run, public TLS, and deployed microphone
-capture remain unverified. A CPU-host recommendation is included; no server was
-purchased or deployed. Working domain/DNS, server access, private configuration and
-an approved pushed Phase 4 revision are needed before those commands can yield a URL.
+files and exact operator commands are in `DEPLOYMENT.md`. Docker's Linux engine is
+now available; Phase 5's actual local build/smoke outcomes are in `PHASE5_REPORT.md`.
+Public TLS and physical microphone capture remain unverified. No cloud server was
+purchased or deployed. Working domain/DNS, authorized server access and private
+configuration are needed before those commands can yield a public URL. Phase 4
+is already committed/pushed at `c8b688d77a7c8f34f74f1d5ab89e9d8d8564753a`.
 
 Testing and dependency findings are recorded in `PHASE4_REPORT.md`. Local Whisper
 weights can be explicitly cached; the CPU smoke uses generated silence and is
@@ -81,7 +82,8 @@ single-process demo implementation and can fail during restarts.
    was user-reported context, not a freshly checked deadline.
 2. Completed: one authorized DeepSeek smoke with source-valid citations. Preserve
    that evidence; any further remote request requires new explicit authorization.
-3. Review/approve the Phase 4 changes for commit and push; neither has occurred.
+3. Phase 4 commit/push is complete. Review the separate Phase 5 changes before
+   authorizing their commit/push; no Phase 5 commit has been made.
 4. Provision the chosen CPU host/domain, populate server-only secrets privately,
    build/test the Linux containers, cache the model, deploy only after approval,
    and verify the resulting public URL and physical microphone flow.
@@ -90,3 +92,8 @@ single-process demo implementation and can fail during restarts.
 6. Record the demo video using real results, capture consent/evidence/review screens,
    prepare the submission description and repository/public URL links, and check
    the hackathon's current required fields/assets. No dashboard submission was made.
+
+Phase 5 provides `SUBMISSION_PACKAGE.md`, `DEMO_SCRIPT.md`,
+`MICROPHONE_CHECKLIST.md` and `RELEASE_CHECKLIST.md` for these actions. A new live
+AMD demonstration requires fresh authorization; the video script instead offers
+the correctly labeled historical text response when no new request is authorized.

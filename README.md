@@ -1,11 +1,12 @@
 # DubGuard — Industrial Narration Review
 
-Phases 1–3: evidence integrity and an interactive reviewer application for AMD Developer Hackathon
+Phases 1–5: evidence integrity, opt-in AMD semantic review and deployment validation for AMD Developer Hackathon
 Act III, **Intelligent Industry**. The deterministic engine compares approved
 English single-speaker narration under reviewer-defined constraints; optional
 local audio transcription, a versioned human review API, and a React reviewer application now surround it.
 
-See [Phase 4 delivery report](PHASE4_REPORT.md), [single-server deployment](DEPLOYMENT.md),
+See [Phase 5 delivery report](PHASE5_REPORT.md), [release checklist](RELEASE_CHECKLIST.md),
+[submission package](SUBMISSION_PACKAGE.md), [Phase 4 delivery report](PHASE4_REPORT.md), [single-server deployment](DEPLOYMENT.md),
 [Phase 3 delivery report](PHASE3_REPORT.md) and [frontend setup](frontend/README.md).
 
 **PASS_CANDIDATE is not safety certification, release approval, or a guarantee of
@@ -16,7 +17,7 @@ Quick Test AMD review, or remote evaluation.
 
 ## Run locally
 
-Python 3.11+ is required; the delivered reports were generated with Python 3.11.9.
+Python 3.11+ is required; historical reports used 3.11.9 and Phase 4 used 3.12.7.
 Run these commands from the project directory. Installation fetches ordinary
 Python dependencies; deterministic execution needs no API key, network service,
 GPU, or model.
@@ -76,7 +77,7 @@ authentication; local `/validate` and deterministic `/verify` remain public deve
 | Audio intake and review | WAV/MP3/WebM Opus/MP4 AAC intake, FFmpeg normalization, complete-file chunking/coverage, SQLite review API |
 | Acoustic recheck | Independent local model hook with protected-term disagreement; requires a separately installed secondary model |
 | MiMo audio | Documented opt-in probe scaffold; no live audio call or quality result yet |
-| CPU Dockerfile | Provided; container build/run not verified because the local daemon is unavailable |
+| CPU container deployment | Backend/frontend images, pinned cache, localhost routing, real CPU silence-ASR, persistence and restart checks executed in Phase 5; public HTTPS still pending |
 | React reviewer application | Quick Test, browser recording, authenticated full review, evidence correction, run-bound signoff and export |
 | Browser capture | Chrome MediaRecorder exercised with a synthetic device; Safari MIME selection implemented but not manually verified |
 

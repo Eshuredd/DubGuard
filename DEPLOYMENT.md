@@ -1,7 +1,8 @@
 # Single-server demo deployment
 
-Status: prepared, not deployed. No public URL is verified. Phase 4 is uncommitted;
-the Git commands below require an approved Phase 4 commit to be pushed first.
+Status: public deployment pending; no public URL is verified. Phase 4 is committed
+and pushed as `c8b688d77a7c8f34f74f1d5ab89e9d8d8564753a`. Phase 5's local container
+execution and current release status are recorded in PHASE5_REPORT.md.
 No AMD inference, purchase, or deployment has been authorized by these instructions.
 
 ## Server and public URL requirements
@@ -11,6 +12,13 @@ with at least 4 vCPUs, 8 GB RAM and 80 GB disk; choose the current matching plan
 the console. This is a sizing recommendation, not a measured capacity guarantee.
 The [provider describes its AMD CPX offering here](https://www.hetzner.com/cloud-singapore/).
 Check current regional pricing before ordering. No GPU server is needed for this demo.
+
+Alternative: a standard CPU DigitalOcean Droplet of the same size; see its
+[current CPU plans](https://www.digitalocean.com/pricing/droplets). AMD Developer
+Cloud's [public offering](https://www.amd.com/en/developer/resources/cloud-access/amd-developer-cloud.html)
+currently emphasizes Instinct GPU instances. If the user's own console offers a
+CPU-only 4-vCPU/8-GB Droplet, these instructions apply to it, but that account-specific
+availability has not been verified. Do not rent a GPU instance just to host this CPU demo.
 
 Use Ubuntu 24.04 LTS with working Docker Engine and Compose v2, Git and Python 3.
 Install Docker using its [official Ubuntu instructions](https://docs.docker.com/engine/install/ubuntu/).
@@ -33,8 +41,10 @@ commit has been approved and pushed. Replace the hostname and commit placeholder
 ```bash
 git clone https://github.com/Eshuredd/DubGuard.git
 cd DubGuard
-export PHASE4_REVISION='<approved Phase 4 commit SHA>'
-git checkout "$PHASE4_REVISION"
+export RELEASE_REVISION='c8b688d77a7c8f34f74f1d5ab89e9d8d8564753a'
+# Use a later reviewed/pushed Phase 5 SHA when adopting its new validation tooling.
+git checkout "$RELEASE_REVISION"
+unset DUBGUARD_SERVER_ENV DUBGUARD_LOCAL_PORT
 export DUBGUARD_DOMAIN='dubguard.your-domain.example'
 export DUBGUARD_WHISPER_REVISION='0d3d19a32d3338f10357c0889762bd8d64bbdeba'
 sudo install -d -m 700 /etc/dubguard
@@ -53,10 +63,10 @@ The generated demo configuration bounds Full Review uploads to 25 MB / 120 secon
 Quick Test always has its stricter 10 MB / 60-second cap.
 
 ```bash
-dc() { docker compose -p dubguard -f deploy/compose.yaml "$@"; }
+dc() { sudo --preserve-env=DUBGUARD_DOMAIN,DUBGUARD_WHISPER_REVISION,DUBGUARD_SERVER_ENV docker compose -p dubguard -f deploy/compose.yaml "$@"; }
 # --quiet avoids rendering secret environment values.
 dc config --quiet
-dc build api web
+dc build api web cache-model
 # Explicit public model download and CPU model-load validation, not AMD inference.
 dc --profile setup run --rm --no-deps cache-model
 dc up -d api web
@@ -86,10 +96,77 @@ and caching the model, run `python3 deploy/smoke.py http://localhost`. This veri
 SPA deep links, proxy routing, readiness and scenarios without inference. It
 does not validate public DNS, TLS issuance, physical microphones or recognition.
 
-The Phase 4 host has a Docker CLI, but the `dockerDesktopLinuxEngine` named pipe
-is absent. Therefore no container build/run was performed. Compose config was
+During Phase 4 the host had a Docker CLI, but the `dockerDesktopLinuxEngine` named pipe
+was absent, so no container build/run was performed then. Compose config was
 validated with temporary empty configuration and fixture hostname/revision;
 no real credentials were loaded or displayed by that check.
+
+### Repeat the full local container protocol (PowerShell)
+
+These checks require the reviewed Phase 5 files in this working tree, or a later
+approved/pushed Phase 5 commit; the Phase 4 SHA alone does not contain the new test
+override or harness. Docker Desktop's Linux engine and Compose v2.24.4+ must be running.
+No Windows/WSL configuration change or unsupported package installation is needed.
+Use disposable data and a **blank AMD key**. Do not copy the real `.env`.
+
+```powershell
+New-Item -ItemType Directory -Force .dubguard-data/phase5 | Out-Null
+# Run only once: this generator refuses to overwrite an existing file.
+.venv/Scripts/python deploy/create_env.py .dubguard-data/phase5/server.env
+$env:DUBGUARD_SERVER_ENV = (Resolve-Path .dubguard-data/phase5/server.env).Path
+$env:DUBGUARD_DOMAIN = 'http://localhost:8080'
+$env:DUBGUARD_WHISPER_REVISION = '0d3d19a32d3338f10357c0889762bd8d64bbdeba'
+function dcl { docker compose -p dubguard-phase5 -f deploy/compose.yaml -f deploy/compose.local.yaml @args }
+dcl config --quiet
+dcl build api web cache-model
+dcl --profile setup run --rm --no-deps cache-model
+dcl up -d api web
+.venv/Scripts/python deploy/smoke.py http://127.0.0.1:18080
+.venv/Scripts/python deploy/validate_local.py --env-file .dubguard-data/phase5/server.env --output reports/phase5/container_smoke.json
+# With frontend dependencies and desktop Chrome already installed:
+npm --prefix frontend run test:container
+dcl exec -T api python -m pip check
+dcl exec -T web caddy validate --config /etc/caddy/Caddyfile
+dcl down
+```
+
+Only `127.0.0.1:18080` is published; backend port 8000 remains private. The harness
+checks same-origin routing, SPA deep links/assets/security headers, real CPU ASR
+on generated silence, local-only Quick Test, blocked sign-off, original-audio/SQLite
+persistence through stop/start and container recreation, seeded interrupted-job
+recovery, and unchanged cached-model hashes with offline/read-only runtime access.
+Pending states are explicitly seeded in the disposable DB: that part verifies
+restart recovery logic, not an actual mid-inference crash. No human speech,
+secondary acoustic recognition or live AMD inference occurs. `down` retains test volumes.
+
+On a Linux VPS, run the identical checks locally after deployment is authorized
+and the Phase 5 revision is available. Use a Docker-enabled account (or run as root)
+and replace the setup block with:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt -e .
+mkdir -p .dubguard-data/phase5
+.venv/bin/python deploy/create_env.py .dubguard-data/phase5/server.env
+export DUBGUARD_SERVER_ENV="$PWD/.dubguard-data/phase5/server.env"
+export DUBGUARD_DOMAIN='http://localhost:8080'
+export DUBGUARD_WHISPER_REVISION='0d3d19a32d3338f10357c0889762bd8d64bbdeba'
+dcl() { docker compose -p dubguard-phase5 -f deploy/compose.yaml -f deploy/compose.local.yaml "$@"; }
+dcl config --quiet
+dcl build api web cache-model
+dcl --profile setup run --rm --no-deps cache-model
+dcl up -d api web
+.venv/bin/python deploy/smoke.py http://127.0.0.1:18080
+.venv/bin/python deploy/validate_local.py --env-file "$DUBGUARD_SERVER_ENV" --output reports/phase5/container_smoke.json
+dcl exec -T api python -m pip check
+dcl exec -T web caddy validate --config /etc/caddy/Caddyfile
+dcl down
+```
+
+Run public deployment separately with the production `dc` function above, reviewed
+server-only configuration and actual hostname. The root-owned 0600 env file requires
+the privileged Compose function; Docker-group membership alone does not make that
+file readable to a normal user's Compose CLI. Do not loosen secret file permissions.
 
 ## Verified local CPU setup in this checkout
 
@@ -165,7 +242,7 @@ then restart. Example (run from the same shell with `dc` defined):
 ```bash
 sudo install -d -m 700 /var/backups/dubguard
 dc stop api
-docker run --rm -v dubguard_review_data:/source:ro \
+sudo docker run --rm -v dubguard_review_data:/source:ro \
   -v /var/backups/dubguard:/backup alpine:3 \
   tar czf /backup/review-data.tar.gz -C /source .
 sudo chmod 600 /var/backups/dubguard/review-data.tar.gz

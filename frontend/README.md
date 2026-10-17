@@ -90,13 +90,20 @@ npm --prefix frontend run generate:api
 
 E2E requires installed desktop Google Chrome and free ports 8000/5173.
 Playwright creates temporary storage and random test-only credentials, starts the
-actual API and Vite, and deletes its data afterward. tests/e2e_server.py stubs ASR
-and secondary recognition only; actual recording, upload, decoding, database,
+actual API and Vite, and deletes its data afterward. tests/e2e_server.py stubs ASR,
+secondary recognition and AMD HTTP responses; actual recording, upload, decoding, database,
 deterministic verification and approval routes run.
 Synthetic microphone capture plus stub ASR does not measure recognition accuracy.
 Unit tests mock microphone APIs. No live AMD call occurs in these suites.
 Screenshots are written under frontend/test-results; selected delivery images are
 in reports/phase3.
+
+Phase 5 adds `npm --prefix frontend run test:container`, run only while the
+isolated localhost Compose stack from DEPLOYMENT.md is running. It uses the actual
+Caddy-served production bundle and CPU ASR on generated silence, checks CSP and
+refresh/delete, and makes no AMD request. It is separate from the eight mocked/stubbed
+development-server E2E tests and does not establish physical microphone or speech accuracy.
+Phase 5 screenshots/results are under reports/phase5.
 
 ## Deployment boundary
 

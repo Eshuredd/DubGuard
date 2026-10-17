@@ -1,9 +1,13 @@
 # Phase 4 — AMD visibility and deployment readiness
 
-Prepared 17 October 2026 from `2f4b0d7` (Reviewer workflow). Changes are local and
-uncommitted. After explicit authorization, exactly one Phase 4 AMD semantic request
-was completed; no retries, remote benchmark, other external API calls, commit, push,
-deployment or dashboard submission followed. The pasted countdown was not independently checked.
+Prepared 17 October 2026 from `2f4b0d7` (Reviewer workflow). The original Phase 4
+work ended with local, uncommitted changes. They were subsequently committed and
+pushed as `c8b688d77a7c8f34f74f1d5ab89e9d8d8564753a` (smoke test), verified against
+fetched origin/main during Phase 5. After explicit authorization, exactly one
+Phase 4 AMD semantic request was completed; no retries or remote benchmark followed.
+No public deployment or dashboard submission occurred. The pasted countdown was
+not independently checked. Results below are the historical Phase 4 measurements;
+see PHASE5_REPORT.md for subsequent container execution and current release status.
 
 ## Implementation results
 
@@ -141,7 +145,7 @@ Explicitly cached public `Systran/faster-whisper-tiny.en` revision
 With the explicit local model-path override, readiness returned true. No `.env`
 change was made. Runtime still never downloads missing weights automatically.
 
-Docker CLI is installed, but its Linux engine named pipe is missing. Compose
+During Phase 4 the Docker CLI was installed, but its Linux engine named pipe was missing. Compose
 configuration validation passed using a temporary empty env file and fixture
 hostname/revision, without rendering secrets. **Container build/run and deployed
 HTTPS/microphone behavior are not verified. No public URL exists.**
@@ -213,8 +217,9 @@ It is evidence of UI behavior, not a live AMD result or real speech recognition.
 
 `SUBMISSION_READINESS.md` contains the concise application/AMD description,
 seven-step demonstration walkthrough, honest limitations and missing artifacts.
-The single authorized semantic smoke is complete. Next: collect/independently verify human clips;
-approve commit/push; supply server/domain/private configuration; build/test Linux
+The single authorized semantic smoke is complete, and Phase 4 was subsequently
+committed/pushed at the SHA above. Next: collect/independently verify human clips;
+supply server/domain/private configuration; validate Linux
 containers, deploy only after approval, verify public HTTPS and microphone use,
 then record the real demo and complete the dashboard's current required fields.
 No GPU/Quark work should delay these P0 steps. Check the actual dashboard deadline.

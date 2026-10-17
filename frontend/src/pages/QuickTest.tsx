@@ -296,6 +296,15 @@ export function QuickTest() {
                 {selected !== report.scenario_id &&
                   "The selected scenario has changed; these results still belong to the previous analysis."}
               </p>
+              <p>
+                Analyzed mode:{" "}
+                <strong>
+                  {report.mode === "amd"
+                    ? "AMD Semantic Review"
+                    : "Local Verification"}
+                </strong>
+                .
+              </p>
               <Badge value={report.state} />
               <AudioPlayer
                 key={report.runs}
@@ -349,6 +358,12 @@ export function QuickTest() {
               {report.mode === "amd" && (
                 <section aria-label="AMD Semantic Review result">
                   <h3>AMD Semantic Review · DeepSeek-V4-Flash</h3>
+                  <p>
+                    Requested model: DeepSeek-V4-Flash. Returned model:{" "}
+                    {report.semantic_verification?.semantic?.model ||
+                      "No model response"}
+                    .
+                  </p>
                   <p>
                     Status: {report.semantic_status.replaceAll("_", " ")}.
                     Consent recorded{" "}

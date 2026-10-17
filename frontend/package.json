@@ -7,6 +7,7 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:container": "playwright test --config=playwright.container.config.ts",
     "generate:api": "node ../scripts/python.mjs ../scripts/export_openapi.py && openapi-typescript openapi.json -o src/generated-api.ts",
     "typecheck": "tsc -b",
     "format": "prettier --write src tests *.ts *.json index.html"

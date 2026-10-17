@@ -1,0 +1,21 @@
+{
+  "build_status": "passed_after_bounded_pip_timeout_fix",
+  "initial_failure": "PyPI wheel download read timeout; not AMD inference",
+  "images": [
+    {
+      "image": "dubguard-phase5-api",
+      "id": "sha256:20d3749f7ebf47094eab4a99357ee29eca61c28fd423f2e8a389bb801b13e8b9",
+      "size_bytes": 389756474
+    },
+    {
+      "image": "dubguard-phase5-web",
+      "id": "sha256:e516b067f1f1ba9d0ce35884cb05a4ed0a2a7f453ab3bded066a052f4ed433ec",
+      "size_bytes": 24976899
+    },
+    {
+      "image": "dubguard-phase5-cache-model",
+      "id": "sha256:8c73a811377b5b3bd12b0323c354ab9ff1224d783ce222141e574fd091313300",
+      "size_bytes": 389756482
+    }
+  ]
+}

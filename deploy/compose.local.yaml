@@ -1,0 +1,7 @@
+# Local validation only. Never bind the test stack to a public interface.
+services:
+  web:
+    environment:
+      DUBGUARD_DOMAIN: ":8080"
+    ports: !override
+      - "127.0.0.1:${DUBGUARD_LOCAL_PORT:-18080}:8080"
