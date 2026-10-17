@@ -1,3 +1,5 @@
 -r requirements.txt
 imageio-ffmpeg==0.6.0
 faster-whisper==1.2.1
+# 1.2.1 still uses av.open(metadata_errors=...), removed in PyAV 19.
+av==18.1.0

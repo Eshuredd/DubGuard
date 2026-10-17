@@ -1,0 +1,33 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.7",
+  "cpu_count": 16,
+  "inference_performed": false,
+  "rocminfo": {
+    "status": "not_installed"
+  },
+  "rocm_smi": {
+    "status": "not_installed"
+  },
+  "amd_smi": {
+    "status": "not_installed"
+  },
+  "rocm_version_file": null,
+  "hardware": {
+    "status": "ok",
+    "exit_code": 0,
+    "output": "[\n    {\n        \"Name\":  \"AMD Radeon(TM) Graphics\",\n        \"AdapterRAM\":  536870912,\n        \"DriverVersion\":  \"30.0.13040.13\"\n    },\n    {\n        \"Name\":  \"NVIDIA GeForce RTX 3060 Laptop GPU\",\n        \"AdapterRAM\":  4293918720,\n        \"DriverVersion\":  \"32.0.15.9597\"\n    }\n]\n",
+    "stderr": ""
+  },
+  "system_memory": {
+    "status": "ok",
+    "exit_code": 0,
+    "output": "{\n    \"TotalVisibleMemorySize\":  16151920,\n    \"FreePhysicalMemory\":  321656\n}\n",
+    "stderr": ""
+  },
+  "torch": {
+    "installed": false
+  },
+  "amd_gpu_runtime_confirmed": false,
+  "next_step": "Stop GPU experiments until a supported AMD GPU notebook and working HIP runtime are supplied."
+}

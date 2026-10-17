@@ -1,0 +1,105 @@
+{
+  "input": "Generated two seconds of silent PCM. No human speech or accuracy labels.",
+  "input_sha256": "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
+  "model": "Systran/faster-whisper-tiny.en",
+  "model_bin_sha256": "1a5afae06a4db91c975c9a9d78be5cc110ee4ea022ad57d55492e4550e936b2a",
+  "model_bytes": 78090594,
+  "backend": "faster-whisper / CTranslate2 CPU int8",
+  "gpu_used": false,
+  "amd_calls": 0,
+  "quark_used": false,
+  "transcription": {
+    "artifact": {
+      "id": "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
+      "sha256": "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
+      "format": "wav",
+      "byte_size": 64044,
+      "duration_seconds": 2.0,
+      "sample_rate": 16000
+    },
+    "transcript": {
+      "source": "asr",
+      "completeness": "unknown",
+      "segments": []
+    },
+    "provider": "faster-whisper",
+    "model": "C:\\Users\\eshum\\Downloads\\DubGuard\\.dubguard-data\\models\\tiny.en",
+    "processing_seconds": 1.1818589000031352,
+    "coverage": {
+      "duration_seconds": 2.0,
+      "processed_seconds": 2.0,
+      "complete_processing": true,
+      "windows": [
+        {
+          "index": 0,
+          "start_seconds": 0.0,
+          "end_seconds": 2.0,
+          "core_start_seconds": 0.0,
+          "core_end_seconds": 2.0
+        }
+      ],
+      "gaps": [
+        {
+          "start_seconds": 0.0,
+          "end_seconds": 2.0,
+          "classification": "digital_silence"
+        }
+      ],
+      "note": "Processing coverage does not prove all spoken words were recognized."
+    },
+    "uncertainty": [
+      "ASR is provisional; missed speech is not independently excluded."
+    ]
+  },
+  "verification": {
+    "decision": "REVIEW_REQUIRED",
+    "findings": [
+      {
+        "rule_id": "EVIDENCE.COMPLETENESS",
+        "status": "UNRESOLVED",
+        "constraint_id": null,
+        "instruction_ids": [],
+        "approved": [],
+        "observed": [],
+        "explanation": "Transcript completeness has not been confirmed; omission checks cannot clear the narration.",
+        "provider": null,
+        "model_call_id": null
+      },
+      {
+        "rule_id": "EVIDENCE.MISSING",
+        "status": "UNRESOLVED",
+        "constraint_id": null,
+        "instruction_ids": [
+          "step-1"
+        ],
+        "approved": [
+          {
+            "source": "approved",
+            "instruction_id": "step-1",
+            "segment_id": null,
+            "text": "Switch the power off.",
+            "start_char": 0,
+            "end_char": 21,
+            "start_seconds": null,
+            "end_seconds": null,
+            "timing_scope": null
+          }
+        ],
+        "observed": [],
+        "explanation": "Instruction evidence is absent and no explicit omission-critical constraint applies.",
+        "provider": null,
+        "model_call_id": null
+      }
+    ],
+    "script_id": "correct",
+    "script_revision": "1",
+    "policy_id": "correct-policy",
+    "policy_revision": "1",
+    "engine_version": "0.5.0",
+    "mode": "deterministic",
+    "semantic": null,
+    "safety_notice": "Review aid only. PASS_CANDIDATE is not safety certification or release approval."
+  },
+  "wall_seconds": 3.099326099996688,
+  "limitations": "Execution/coverage smoke only. Silence is not real speech; no speech accuracy, GPU speedup, or semantic validity measured."
+}

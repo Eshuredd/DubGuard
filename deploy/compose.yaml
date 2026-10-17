@@ -1,0 +1,77 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file:
+      - ${DUBGUARD_SERVER_ENV:-/etc/dubguard/server.env}
+    environment:
+      DUBGUARD_DATA_DIR: /home/dubguard/data
+      DUBGUARD_WHISPER_MODEL: /models/tiny.en
+      DUBGUARD_ASR_CPU_THREADS: "2"
+      HF_HUB_OFFLINE: "1"
+      OMP_NUM_THREADS: "2"
+    volumes:
+      - review_data:/home/dubguard/data
+      - whisper_models:/models:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 3
+    mem_limit: 4g
+    pids_limit: 128
+    restart: unless-stopped
+    stop_grace_period: 100s
+    networks: [application]
+    logging: &logs
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    environment:
+      DUBGUARD_DOMAIN: ${DUBGUARD_DOMAIN:?Set a DNS hostname pointing to this server}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    cpus: 1
+    mem_limit: 256m
+    pids_limit: 128
+    restart: unless-stopped
+    networks: [application]
+    logging: *logs
+  cache-model:
+    profiles: [setup]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    user: "0:0"
+    entrypoint: [python, /setup/cache_model.py]
+    environment:
+      HF_HUB_OFFLINE: "0"
+      DUBGUARD_WHISPER_REVISION: ${DUBGUARD_WHISPER_REVISION:?Set the reviewed model commit SHA}
+    volumes:
+      - whisper_models:/models
+      - ./cache_model.py:/setup/cache_model.py:ro
+    mem_limit: 2g
+    networks: [application]
+    logging: *logs
+volumes:
+  review_data:
+  whisper_models:
+  caddy_data:
+  caddy_config:
+networks:
+  application:

@@ -124,6 +124,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/ready": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Ready */
+    get: operations["ready_ready_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/review/artifacts": {
     parameters: {
       query?: never;
@@ -896,13 +913,26 @@ export interface components {
     /** QuickReport */
     QuickReport: {
       alignment?: components["schemas"]["AlignmentRun"] | null;
+      /**
+       * Amd Runs
+       * @default 0
+       */
+      amd_runs: number;
       artifact?: components["schemas"]["AudioArtifact"] | null;
+      /** Consented At */
+      consented_at?: number | null;
       /** Error */
       error?: string | null;
       /** Expires At */
       expires_at: number;
       /** Id */
       id: string;
+      /**
+       * Mode
+       * @default local
+       * @enum {string}
+       */
+      mode: "local" | "amd";
       /**
        * Notice
        * @default Demonstration fixture only. Never a human release approval. Local ASR is provisional.
@@ -912,6 +942,12 @@ export interface components {
       runs: number;
       /** Scenario Id */
       scenario_id?: string | null;
+      /**
+       * Semantic Status
+       * @default not_requested
+       */
+      semantic_status: string;
+      semantic_verification?: components["schemas"]["ReviewResult"] | null;
       /** State */
       state: string;
       transcription?: components["schemas"]["TranscriptionResult"] | null;
@@ -985,6 +1021,8 @@ export interface components {
       attempts?: number | null;
       /** Call Id */
       call_id?: string | null;
+      /** Error Class */
+      error_class?: string | null;
       /** Explanation */
       explanation: string;
       /** Findings */
@@ -1352,6 +1390,8 @@ export interface operations {
     parameters: {
       query: {
         scenario_id: string;
+        mode?: "local" | "amd";
+        consent?: boolean;
       };
       header?: {
         authorization?: string | null;
@@ -1525,6 +1565,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ready_ready_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
     };

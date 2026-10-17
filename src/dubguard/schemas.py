@@ -242,6 +242,7 @@ class SemanticAssessment(Model):
     latency_ms: float | None = Field(default=None, ge=0)
     attempts: int | None = Field(default=None, ge=0)
     usage: dict[str, int] | None = None
+    error_class: str | None = None
 
     @model_validator(mode="after")
     def provenance(self):

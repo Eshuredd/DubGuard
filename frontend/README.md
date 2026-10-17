@@ -5,7 +5,7 @@ Run commands below from the repository root. Python setup is in the root README.
 
 ## Development
 
-1. Install Node.js 22.12+ and run `npm --prefix frontend ci`.
+1. Install Node.js 22.22.2+ (22.x), 24.15+ (24.x), or 26+ and run `npm --prefix frontend ci`.
 2. Install `requirements-audio.txt`. Supply a locally cached Whisper model or local model directory through `DUBGUARD_WHISPER_MODEL`. No automatic model download occurs.
 3. In private environment configuration set `DUBGUARD_REVIEW_TOKENS_JSON` to a JSON object mapping reviewer IDs to unique random secrets of at least 24 characters. Set a private `DUBGUARD_DATA_DIR`. For Quick Test set a separate random `DUBGUARD_DEMO_ACCESS_CODE` (24+ characters). Do not commit secrets.
 4. Start `.venv/bin/python -m uvicorn dubguard.api:app --host 127.0.0.1 --port 8000`.
@@ -54,10 +54,20 @@ original recording with 0.25 seconds of preceding context.
 ## Quick Test limits and retention
 
 Quick Test needs the operator's demo code and issues a distinct scoped session.
-It never creates approved organizational policies or human approvals and never
-calls AMD. Six scenarios are explicitly demonstration fixtures.
+It never creates approved organizational policies or human approvals. Six scenarios
+are explicitly demonstration fixtures. Local Verification is selected by default
+and never calls AMD. AMD Semantic Review requires a new consent checkbox for each
+analysis; the script, policy and provisional transcript go to DeepSeek-V4-Flash.
+Original audio stays on the server. Server-only credentials are never sent to the browser.
+AMD results appear separately from retained local deterministic findings, with
+model/call provenance, latency, attempt count and failures. Invalid citations remain
+unresolved; even valid text citations and model equivalence cannot verify ASR or approve release.
 Limits: 10 MB, 60 seconds, three analyses/session, 30-minute session TTL,
 20 active sessions, 30 admissions/hour, two concurrent demo jobs.
+AMD has an additional limit of two runs/session (failed analyses count), one
+concurrent demo HTTP call and zero retries (one HTTP attempt/run, 1024 output tokens,
+40-second read/write timeout). Transport timeouts are idle-operation limits, not a
+guaranteed wall-clock deadline. Runtime semaphores retain slots when a session is deleted.
 Only one current result and audio artifact is retained per session.
 DELETE /quick/session explicitly deletes session data; expired sessions are
 removed by requests and a 60-second lifespan cleanup loop.
@@ -91,7 +101,9 @@ in reports/phase3.
 ## Deployment boundary
 
 `npm --prefix frontend run build` emits frontend/dist.
-nginx.example.conf is an undeployed reverse-proxy/SPA fallback reference.
+Use [the complete Caddy/Compose deployment](../DEPLOYMENT.md); it builds the SPA,
+routes /api on the same HTTPS origin, persists private data, caches the model and
+limits server resources. nginx.example.conf remains an older alternative reference.
 Use HTTPS termination, same-origin /api routing and private storage. Do not expose
 Vite development hosting as production. Browser microphone use requires a secure
 context (HTTPS or localhost). Before production replace shared tokens and

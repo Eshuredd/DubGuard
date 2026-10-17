@@ -5,11 +5,12 @@ import asyncio
 from contextlib import asynccontextmanager
 from starlette.concurrency import run_in_threadpool
 from fastapi import Header
-from .review import reviewer
+from .review import reviewer, _store
 from .quick import router as quick_router, cleanup, recover_interrupted
 
 from fastapi import FastAPI, Query
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
+from .readiness import readiness
 
 from .engine import verify
 from .evaluation import evaluate, markdown_report
@@ -18,6 +19,7 @@ from .review import router as review_router
 
 @asynccontextmanager
 async def lifespan(app):
+    await run_in_threadpool(_store().recover_interrupted)
     await run_in_threadpool(recover_interrupted)
     async def sweep():
         while True:
@@ -58,6 +60,12 @@ def health():
 def validate_policy(payload: ScriptPolicy):
     return {"valid": True, "script_id": payload.script.id, "policy_id": payload.policy.id,
             "notice": "Structural/policy validation only; reviewer identity and industrial correctness are not authenticated."}
+
+
+@app.get("/ready")
+def ready():
+    result = readiness()
+    return JSONResponse(result, status_code=200 if result['ready'] else 503)
 
 
 @app.post("/verify", response_model=ReviewResult)

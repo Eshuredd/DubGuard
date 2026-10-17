@@ -5,12 +5,14 @@ Act III, **Intelligent Industry**. The deterministic engine compares approved
 English single-speaker narration under reviewer-defined constraints; optional
 local audio transcription, a versioned human review API, and a React reviewer application now surround it.
 
-See [Phase 3 delivery report](PHASE3_REPORT.md) and [frontend setup](frontend/README.md).
+See [Phase 4 delivery report](PHASE4_REPORT.md), [single-server deployment](DEPLOYMENT.md),
+[Phase 3 delivery report](PHASE3_REPORT.md) and [frontend setup](frontend/README.md).
 
 **PASS_CANDIDATE is not safety certification, release approval, or a guarantee of
 semantic equivalence.** Ambiguous evidence requires human review. ASR is provisional;
 only an authenticated reviewer can sign off a recording. AMD semantic inference
-is available only when explicitly selected for hybrid verification or remote evaluation.
+is available only when explicitly selected for hybrid verification, consented
+Quick Test AMD review, or remote evaluation.
 
 ## Run locally
 
@@ -84,7 +86,7 @@ local model directory; missing models fail visibly without automatic downloads.
 
 ### Start the reviewer application
 
-Node.js 22.12+ and the audio dependencies above are required. Configure private
+Node.js 22.22.2+ (22.x), 24.15+ (24.x), or 26+ and the audio dependencies above are required. Configure private
 environment variables as described under “Audio and human-review workflow”:
 `DUBGUARD_REVIEW_TOKENS_JSON`, `DUBGUARD_DATA_DIR`, and a cached
 `DUBGUARD_WHISPER_MODEL`. Quick Test additionally needs a separate random

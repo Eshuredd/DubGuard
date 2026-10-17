@@ -101,6 +101,7 @@ class FasterWhisperProvider:
             raise AudioError("Install requirements-audio.txt to enable local ASR") from exc
         if self._model is None:
             self._model = WhisperModel(self.model_id, device="cpu", compute_type="int8",
+                                       cpu_threads=_max_int("DUBGUARD_ASR_CPU_THREADS", 2, 8), num_workers=1,
                                        local_files_only=self.local_files_only)
         segments, _ = self._model.transcribe(str(wav_path), language="en", beam_size=5,
                                                vad_filter=False, condition_on_previous_text=False)

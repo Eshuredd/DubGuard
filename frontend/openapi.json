@@ -953,6 +953,11 @@
               }
             ]
           },
+          "amd_runs": {
+            "default": 0,
+            "title": "Amd Runs",
+            "type": "integer"
+          },
           "artifact": {
             "anyOf": [
               {
@@ -962,6 +967,17 @@
                 "type": "null"
               }
             ]
+          },
+          "consented_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consented At"
           },
           "error": {
             "anyOf": [
@@ -980,6 +996,12 @@
           },
           "id": {
             "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "default": "local",
+            "enum": ["local", "amd"],
+            "title": "Mode",
             "type": "string"
           },
           "notice": {
@@ -1001,6 +1023,21 @@
               }
             ],
             "title": "Scenario Id"
+          },
+          "semantic_status": {
+            "default": "not_requested",
+            "title": "Semantic Status",
+            "type": "string"
+          },
+          "semantic_verification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "state": {
             "title": "State",
@@ -1216,6 +1253,17 @@
               }
             ],
             "title": "Call Id"
+          },
+          "error_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Class"
           },
           "explanation": {
             "title": "Explanation",
@@ -2189,6 +2237,27 @@
             }
           },
           {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "local",
+              "enum": ["local", "amd"],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "consent",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Consent",
+              "type": "boolean"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -2434,6 +2503,22 @@
         },
         "summary": "Create Session",
         "tags": ["demonstration"]
+      }
+    },
+    "/ready": {
+      "get": {
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready"
       }
     },
     "/review/artifacts": {

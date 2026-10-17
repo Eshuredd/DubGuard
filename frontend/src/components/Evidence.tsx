@@ -88,6 +88,7 @@ export function Findings({
   onAccept,
   onDecision,
   disabled = false,
+  title = "Verification findings",
 }: {
   result: Review;
   onSeek: (s: number | null | undefined) => void;
@@ -97,11 +98,12 @@ export function Findings({
     decision: "CORRECTION_REQUIRED" | "RERECORD_REQUIRED" | "ESCALATED",
   ) => void;
   disabled?: boolean;
+  title?: string;
 }) {
   return (
     <section>
       <div className="section-heading">
-        <h2>Verification findings</h2>
+        <h2>{title}</h2>
         <Badge value={result.decision} />
       </div>
       <p className="notice">{result.safety_notice}</p>
@@ -112,6 +114,9 @@ export function Findings({
           {result.semantic.status} · {result.semantic.explanation}
           {result.semantic.latency_ms != null &&
             ` · ${(result.semantic.latency_ms / 1000).toFixed(2)} seconds`}
+          {` · ${result.semantic.attempts ?? 0} HTTP attempts`}
+          {result.semantic.error_class && ` · ${result.semantic.error_class}`}
+          {result.semantic.call_id && ` · Call ${result.semantic.call_id}`}
         </p>
       )}
       {!result.findings.length && (

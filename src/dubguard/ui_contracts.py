@@ -1,5 +1,5 @@
 """Public application response contracts used to generate TypeScript types."""
-from typing import Any
+from typing import Any, Literal
 from pydantic import Field
 from .schemas import Model, ScriptPolicy, ReviewResult, VerifiedTranscriptEvidence
 from .audio import AudioArtifact, TranscriptionResult
@@ -61,6 +61,11 @@ class QuickReport(Model):
     state: str
     expires_at: float
     runs: int
+    amd_runs: int = 0
+    mode: Literal["local", "amd"] = "local"
+    consented_at: float | None = None
+    semantic_status: str = "not_requested"
+    semantic_verification: ReviewResult | None = None
     scenario_id: str | None = None
     artifact: AudioArtifact | None = None
     transcription: TranscriptionResult | None = None

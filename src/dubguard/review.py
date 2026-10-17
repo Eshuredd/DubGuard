@@ -254,6 +254,21 @@ class ReviewStore:
                 uuid4().hex, workflow_id, failed_state, reviewer_id,
                 json.dumps({"job_input_revision": expected_revision, "note": "Failure never restores readiness"}), _now()))
 
+    def recover_interrupted(self) -> int:
+        """Single-worker startup recovery; never invent a completed job or replay inference."""
+        failed = {"TRANSCRIBING": "TRANSCRIPTION_FAILED", "VERIFYING": "VERIFICATION_FAILED",
+                  "ACOUSTIC_RECHECKING": "ACOUSTIC_RECHECK_FAILED"}
+        with self._connect() as db:
+            rows = db.execute("SELECT id,state FROM workflows WHERE state IN ('TRANSCRIBING','VERIFYING','ACOUSTIC_RECHECKING')").fetchall()
+            for row in rows:
+                state = failed[row["state"]]
+                db.execute("UPDATE workflows SET state=?,verification_record_id=NULL,revision=revision+1 WHERE id=?", (state, row["id"]))
+                db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?)", (
+                    uuid4().hex, row["id"], "INTERRUPTED_ON_RESTART", "system",
+                    json.dumps({"previous_state": row["state"], "state": state,
+                                "note": "No automatic retry; inspect evidence and create a superseding workflow if needed."}), _now()))
+        return len(rows)
+
     def _checked_run(self, db, workflow: dict) -> ReviewResult:
         if workflow["state"] not in {"IN_REVIEW", "READY_FOR_SIGNOFF"}:
             raise ValueError("processing is incomplete or failed")

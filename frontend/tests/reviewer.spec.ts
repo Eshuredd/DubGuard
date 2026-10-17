@@ -121,6 +121,82 @@ test("real MediaRecorder on fake device → private Quick Test → refresh and d
   ).toBeVisible();
 });
 
+test("Quick Test AMD consent, mocked citation evidence, invalid citations and quota", async ({
+  page,
+}) => {
+  await page.goto("/test");
+  await page
+    .getByLabel("Demo access code")
+    .fill(process.env.DUBGUARD_E2E_DEMO_CODE!);
+  await page.getByRole("button", { name: "Start Quick Test" }).click();
+  await expect(page.getByLabel("Verification mode")).toHaveValue("local");
+  await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
+    name: "protocol.wav",
+    mimeType: "audio/wav",
+    buffer: wav(),
+  });
+  await page.getByLabel("Verification mode").selectOption("amd");
+  await expect(
+    page.getByRole("button", { name: "Analyze recording" }),
+  ).toBeDisabled();
+  await page.getByLabel("I consent to sending script").check();
+  await page.getByRole("button", { name: "Analyze recording" }).click();
+  await expect(
+    page.getByRole("heading", { name: "AMD semantic findings" }),
+  ).toBeVisible();
+  await expect(page.getByText(/playwright-mock-no-real-AMD/)).toBeVisible();
+  await expect(page.getByText(/1 HTTP attempts/)).toBeVisible();
+  await expect(
+    page.getByText(/Mocked HTTP, not actual AMD inference/),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("I consent to sending script"),
+  ).not.toBeChecked();
+  const a11y = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(a11y.violations).toEqual([]);
+  await page.screenshot({
+    path: "test-results/quick-amd-mocked.png",
+    fullPage: true,
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "AMD semantic findings" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Verification mode")).toHaveValue("local");
+  await page.getByRole("button", { name: "15 versus 50", exact: true }).click();
+  await page.getByLabel("Verification mode").selectOption("amd");
+  await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
+    name: "protocol.wav",
+    mimeType: "audio/wav",
+    buffer: wav(),
+  });
+  await page.getByLabel("I consent to sending script").check();
+  await page.getByRole("button", { name: "Analyze recording" }).click();
+  await expect(page.getByText(/Status: invalid citations/)).toBeVisible();
+  await expect(
+    page.getByText(/invalid requirement, source reference/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Verification findings", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
+    name: "protocol.wav",
+    mimeType: "audio/wav",
+    buffer: wav(),
+  });
+  await page.getByLabel("I consent to sending script").check();
+  await expect(
+    page.getByRole("button", { name: "Analyze recording" }),
+  ).toBeDisabled();
+  await page.getByLabel("Verification mode").selectOption("local");
+  await expect(
+    page.getByRole("button", { name: "Analyze recording" }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Delete session and audio" }).click();
+});
+
 test("full review policy approval, upload, tentative mapping, correction, critical block and explicit signoff", async ({
   page,
 }) => {

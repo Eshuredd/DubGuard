@@ -36,7 +36,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "../.venv/bin/python -m uvicorn e2e_server:app --app-dir ../tests --host 127.0.0.1 --port 8000",
+        "node ../scripts/python.mjs -m uvicorn e2e_server:app --app-dir ../tests --host 127.0.0.1 --port 8000",
       url: "http://127.0.0.1:8000/health",
       reuseExistingServer: false,
       env: {

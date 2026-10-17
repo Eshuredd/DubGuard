@@ -1,0 +1,247 @@
+{
+  "verification_mode": "offline inspection and replay of the single saved response; no HTTP calls",
+  "additional_http_calls": 0,
+  "http_status": 200,
+  "http_status_basis": "Existing provider accepts status=real only after HTTP 200 and validated response parsing.",
+  "input_sha256_matches": true,
+  "recorded_attempts": 1,
+  "actual_model": "self-dploy/DeepSeek-V4-Flash",
+  "reported_model_matches_assessment": true,
+  "latency_ms": 16392.71870002267,
+  "usage": {
+    "prompt_tokens": 662,
+    "total_tokens": 805,
+    "completion_tokens": 143
+  },
+  "finish_reason": "stop",
+  "raw_response_revalidation_matches": true,
+  "citation_checks": [
+    {
+      "requirement_id": "power-state",
+      "requirement_exists": true,
+      "constraint_kind": "polarity",
+      "finding_kind": "POLARITY",
+      "constraint_instruction_match": true,
+      "approved_phrase": "off",
+      "reversed_phrase": "on",
+      "spans": [
+        {
+          "source": "approved",
+          "instruction_id": "power",
+          "segment_id": null,
+          "quote": "Switch the power off.",
+          "start_char": 0,
+          "end_char": 21,
+          "exact_source_slice_match": true,
+          "unique_in_source": true,
+          "source_mapping_match": true
+        },
+        {
+          "source": "observed",
+          "instruction_id": "power",
+          "segment_id": "s1",
+          "quote": "Switch the power on.",
+          "start_char": 0,
+          "end_char": 20,
+          "exact_source_slice_match": true,
+          "unique_in_source": true,
+          "source_mapping_match": true
+        }
+      ]
+    }
+  ],
+  "deterministic_decision": "CRITICAL_DEVIATION",
+  "hybrid_decision_using_recorded_assessment": "CRITICAL_DEVIATION",
+  "deterministic_findings_preserved": true,
+  "local_result": {
+    "decision": "CRITICAL_DEVIATION",
+    "findings": [
+      {
+        "rule_id": "POLARITY.REVERSED",
+        "status": "VIOLATION",
+        "constraint_id": "power-state",
+        "instruction_ids": [
+          "power"
+        ],
+        "approved": [
+          {
+            "source": "approved",
+            "instruction_id": "power",
+            "segment_id": null,
+            "text": "Switch the power off.",
+            "start_char": 0,
+            "end_char": 21,
+            "start_seconds": null,
+            "end_seconds": null,
+            "timing_scope": null
+          }
+        ],
+        "observed": [
+          {
+            "source": "observed",
+            "instruction_id": "power",
+            "segment_id": "s1",
+            "text": "Switch the power on.",
+            "start_char": 0,
+            "end_char": 20,
+            "start_seconds": null,
+            "end_seconds": null,
+            "timing_scope": null
+          }
+        ],
+        "explanation": "The reviewer-protected polarity phrase was replaced by its declared reversal in the same instruction template.",
+        "provider": null,
+        "model_call_id": null
+      }
+    ],
+    "script_id": "power",
+    "script_revision": "1",
+    "policy_id": "power-policy",
+    "policy_revision": "1",
+    "engine_version": "0.5.0",
+    "mode": "deterministic",
+    "semantic": null,
+    "safety_notice": "Review aid only. PASS_CANDIDATE is not safety certification or release approval."
+  },
+  "recorded_hybrid_result": {
+    "decision": "CRITICAL_DEVIATION",
+    "findings": [
+      {
+        "rule_id": "POLARITY.REVERSED",
+        "status": "VIOLATION",
+        "constraint_id": "power-state",
+        "instruction_ids": [
+          "power"
+        ],
+        "approved": [
+          {
+            "source": "approved",
+            "instruction_id": "power",
+            "segment_id": null,
+            "text": "Switch the power off.",
+            "start_char": 0,
+            "end_char": 21,
+            "start_seconds": null,
+            "end_seconds": null,
+            "timing_scope": null
+          }
+        ],
+        "observed": [
+          {
+            "source": "observed",
+            "instruction_id": "power",
+            "segment_id": "s1",
+            "text": "Switch the power on.",
+            "start_char": 0,
+            "end_char": 20,
+            "start_seconds": null,
+            "end_seconds": null,
+            "timing_scope": null
+          }
+        ],
+        "explanation": "The reviewer-protected polarity phrase was replaced by its declared reversal in the same instruction template.",
+        "provider": null,
+        "model_call_id": null
+      },
+      {
+        "rule_id": "SEMANTIC.SUSPECTED_DEVIATION",
+        "status": "UNRESOLVED",
+        "constraint_id": "power-state",
+        "instruction_ids": [
+          "power"
+        ],
+        "approved": [
+          {
+            "source": "approved",
+            "instruction_id": "power",
+            "segment_id": null,
+            "text": "Switch the power off.",
+            "start_char": 0,
+            "end_char": 21,
+            "start_seconds": null,
+            "end_seconds": null,
+            "timing_scope": null
+          }
+        ],
+        "observed": [
+          {
+            "source": "observed",
+            "instruction_id": "power",
+            "segment_id": "s1",
+            "text": "Switch the power on.",
+            "start_char": 0,
+            "end_char": 20,
+            "start_seconds": null,
+            "end_seconds": null,
+            "timing_scope": null
+          }
+        ],
+        "explanation": "AMD advisory: The approved instruction requires the power to be switched off, but the observed segment states 'on', reversing the required polarity.",
+        "provider": "amd-token-factory",
+        "model_call_id": "0f69ad3c1f7c428eb357124d75c0578c"
+      }
+    ],
+    "script_id": "power",
+    "script_revision": "1",
+    "policy_id": "power-policy",
+    "policy_revision": "1",
+    "engine_version": "0.5.0",
+    "mode": "hybrid",
+    "semantic": {
+      "provider": "amd-token-factory",
+      "status": "real",
+      "verdict": "DEVIATION",
+      "explanation": "The observed transcript changes the required power state from 'off' to 'on', directly contradicting the approved instruction and the policy polarity constraint.",
+      "real_inference": true,
+      "call_id": "0f69ad3c1f7c428eb357124d75c0578c",
+      "model": "self-dploy/DeepSeek-V4-Flash",
+      "findings": [
+        {
+          "requirement_id": "power-state",
+          "kind": "POLARITY",
+          "verdict": "DEVIATION",
+          "instruction_id": "power",
+          "approved": [
+            {
+              "source": "approved",
+              "instruction_id": "power",
+              "segment_id": null,
+              "text": "Switch the power off.",
+              "start_char": 0,
+              "end_char": 21,
+              "start_seconds": null,
+              "end_seconds": null,
+              "timing_scope": null
+            }
+          ],
+          "observed": [
+            {
+              "source": "observed",
+              "instruction_id": "power",
+              "segment_id": "s1",
+              "text": "Switch the power on.",
+              "start_char": 0,
+              "end_char": 20,
+              "start_seconds": null,
+              "end_seconds": null,
+              "timing_scope": null
+            }
+          ],
+          "explanation": "The approved instruction requires the power to be switched off, but the observed segment states 'on', reversing the required polarity."
+        }
+      ],
+      "issues": [],
+      "response_valid": true,
+      "latency_ms": 16392.71870002267,
+      "attempts": 1,
+      "usage": {
+        "prompt_tokens": 662,
+        "total_tokens": 805,
+        "completion_tokens": 143
+      },
+      "error_class": null
+    },
+    "safety_notice": "Review aid only. PASS_CANDIDATE is not safety certification or release approval."
+  },
+  "limitations": "One manually supplied synthetic text example, not audio or a benchmark. Citation validity does not prove general semantic accuracy."
+}

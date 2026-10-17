@@ -7,7 +7,8 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "generate:api": "../.venv/bin/python ../scripts/export_openapi.py && openapi-typescript openapi.json -o src/generated-api.ts",
+    "generate:api": "node ../scripts/python.mjs ../scripts/export_openapi.py && openapi-typescript openapi.json -o src/generated-api.ts",
+    "typecheck": "tsc -b",
     "format": "prettier --write src tests *.ts *.json index.html"
   },
   "type": "module",
@@ -35,6 +36,6 @@
   },
   "private": true,
   "engines": {
-    "node": ">=22.12.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   }
 }

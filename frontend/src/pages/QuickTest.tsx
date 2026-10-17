@@ -18,6 +18,8 @@ export function QuickTest() {
     ),
     [report, setReport] = useState<Quick | null>(null),
     [busy, setBusy] = useState(false),
+    [mode, setMode] = useState<"local" | "amd">("local"),
+    [consent, setConsent] = useState(false),
     [error, setError] = useState("");
   const audio = useRef<HTMLAudioElement>(null);
   useEffect(() => {
@@ -79,11 +81,14 @@ export function QuickTest() {
     setError("");
     try {
       await upload(
-        "/quick/analyze?scenario_id=" + encodeURIComponent(selected),
+        "/quick/analyze?scenario_id=" +
+          encodeURIComponent(selected) +
+          `&mode=${mode}&consent=${mode === "amd" && consent}`,
         file,
         credential,
       );
       setFile(null);
+      setConsent(false);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -119,8 +124,8 @@ export function QuickTest() {
       </header>
       <div className="notice">
         Demonstration fixtures · English, one speaker · No organizational policy
-        approval or release signoff. Quick Test runs local ASR and rules only;
-        no AMD request is made.
+        approval or release signoff. Local Verification is the default. AMD
+        Semantic Review sends text only after your explicit consent.
       </div>
       {error && (
         <p className="error" role="alert">
@@ -161,6 +166,7 @@ export function QuickTest() {
               {report
                 ? new Date(report.expires_at * 1000).toLocaleTimeString()
                 : "…"}
+              {` · ${report?.amd_runs ?? 0}/2 AMD runs`}
             </span>
             <button className="text-button" onClick={discard}>
               Delete session and audio
@@ -214,10 +220,49 @@ export function QuickTest() {
             <section className="panel">
               <h2>2. Add your voice</h2>
               <fieldset disabled={processing}>
+                <label>
+                  Verification mode
+                  <select
+                    value={mode}
+                    onChange={(e) => {
+                      setMode(e.target.value as "local" | "amd");
+                      setConsent(false);
+                    }}
+                  >
+                    <option value="local">Local Verification</option>
+                    <option value="amd">AMD Semantic Review</option>
+                  </select>
+                </label>
+                {mode === "amd" && (
+                  <div className="notice">
+                    <p>
+                      DeepSeek-V4-Flash reviews the approved script, policy and
+                      provisional transcript through AMD Token Factory. Original
+                      audio stays on this server. One HTTP attempt per run; two
+                      AMD runs per session, including failures. Findings remain
+                      advisory.
+                    </p>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={consent}
+                        onChange={(e) => setConsent(e.target.checked)}
+                      />
+                      I consent to sending script, policy and transcript text to
+                      AMD for this analysis.
+                    </label>
+                  </div>
+                )}
                 <AudioInput file={file} onChange={setFile} />
                 <button
                   className="primary wide"
-                  disabled={!file || processing || (report?.runs ?? 0) >= 3}
+                  disabled={
+                    !file ||
+                    processing ||
+                    (report?.runs ?? 0) >= 3 ||
+                    (mode === "amd" &&
+                      (!consent || (report?.amd_runs ?? 0) >= 2))
+                  }
                   onClick={analyze}
                 >
                   Analyze recording
@@ -226,7 +271,9 @@ export function QuickTest() {
               {processing && (
                 <p role="status">
                   Processing original audio with local ASR… Keep this session
-                  open. You can refresh safely.
+                  open. You can refresh safely.{" "}
+                  {report?.mode === "amd" &&
+                    `AMD status: ${report.semantic_status}. Requested model: DeepSeek-V4-Flash.`}
                 </p>
               )}
             </section>
@@ -291,10 +338,46 @@ export function QuickTest() {
                 </details>
               )}
               {report.verification && (
-                <Findings
-                  result={report.verification}
-                  onSeek={(s) => jump(audio.current, s)}
-                />
+                <>
+                  <h3>Local deterministic checks · provisional ASR</h3>
+                  <Findings
+                    result={report.verification}
+                    onSeek={(s) => jump(audio.current, s)}
+                  />
+                </>
+              )}
+              {report.mode === "amd" && (
+                <section aria-label="AMD Semantic Review result">
+                  <h3>AMD Semantic Review · DeepSeek-V4-Flash</h3>
+                  <p>
+                    Status: {report.semantic_status.replaceAll("_", " ")}.
+                    Consent recorded{" "}
+                    {report.consented_at
+                      ? new Date(
+                          report.consented_at * 1000,
+                        ).toLocaleTimeString()
+                      : "not available"}
+                    .
+                  </p>
+                  <p>
+                    Source validation checks citations against supplied text; it
+                    does not verify spoken words or establish semantic accuracy.
+                    Unsupported citations require review. AMD cannot approve a
+                    recording.
+                  </p>
+                  {report.semantic_verification && (
+                    <Findings
+                      title="AMD semantic findings"
+                      result={{
+                        ...report.semantic_verification,
+                        findings: report.semantic_verification.findings.filter(
+                          (f) => f.rule_id.startsWith("SEMANTIC."),
+                        ),
+                      }}
+                      onSeek={(s) => jump(audio.current, s)}
+                    />
+                  )}
+                </section>
               )}
             </section>
           )}
