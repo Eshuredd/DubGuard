@@ -66,6 +66,7 @@ export function Findings({
   idPrefix,
   selectedIndex,
   providerDetails = true,
+  demo = false,
 }: {
   result: Review;
   onSeek: (s: number | null | undefined) => void;
@@ -80,6 +81,7 @@ export function Findings({
   idPrefix?: string;
   selectedIndex?: number;
   providerDetails?: boolean;
+  demo?: boolean;
 }) {
   return (
     <section>
@@ -89,11 +91,13 @@ export function Findings({
       </div>
       <p className="notice">{result.safety_notice}</p>
       <p className="finding-guidance">
-        {!provisional && result.decision === "CRITICAL_DEVIATION"
-          ? "Critical deviation confirmed from human-verified evidence. A new recording is required."
-          : result.decision === "PASS_CANDIDATE"
-            ? "No confirmed policy violation from current evidence. Human review and sign-off prerequisites still apply."
-            : "Needs human confirmation. Listen to the cited source, confirm the actual words and resolve uncertain evidence before deciding."}
+        {demo
+          ? "Demo assessment from visitor reference/evidence only. This is not organizational approval or authenticated sign-off. Unverified ASR remains provisional."
+          : !provisional && result.decision === "CRITICAL_DEVIATION"
+            ? "Critical deviation confirmed from human-verified evidence. A new recording is required."
+            : result.decision === "PASS_CANDIDATE"
+              ? "No confirmed policy violation from current evidence. Human review and sign-off prerequisites still apply."
+              : "Needs human confirmation. Listen to the cited source, confirm the actual words and resolve uncertain evidence before deciding."}
       </p>
       {result.semantic && (
         <p className="notice">
@@ -156,7 +160,7 @@ export function Findings({
             {!!(f.approved.length + f.observed.length) && (
               <div className="comparison">
                 <div>
-                  <span>Approved</span>
+                  <span>{demo ? "Reference script" : "Approved"}</span>
                   {f.approved.map((e, j) => (
                     <p key={j}>
                       <Difference

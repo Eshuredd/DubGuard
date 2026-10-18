@@ -520,6 +520,18 @@
         "title": "Body_analyze_quick_analyze_post",
         "type": "object"
       },
+      "Body_analyze_workspace_analyze_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": ["file"],
+        "title": "Body_analyze_workspace_analyze_post",
+        "type": "object"
+      },
       "Body_upload_audio_review_artifacts_post": {
         "properties": {
           "file": {
@@ -558,6 +570,75 @@
         "enum": ["PASS_CANDIDATE", "CRITICAL_DEVIATION", "REVIEW_REQUIRED"],
         "title": "Decision",
         "type": "string"
+      },
+      "DemoEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "audio_sha256": {
+            "title": "Audio Sha256",
+            "type": "string"
+          },
+          "provenance": {
+            "const": "anonymous visitor attestation; not authenticated reviewer evidence",
+            "default": "anonymous visitor attestation; not authenticated reviewer evidence",
+            "title": "Provenance",
+            "type": "string"
+          },
+          "raw_run": {
+            "title": "Raw Run",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ReviewResult"
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/Transcript"
+          }
+        },
+        "required": [
+          "transcript",
+          "audio_sha256",
+          "raw_run",
+          "reason",
+          "result"
+        ],
+        "title": "DemoEvidence",
+        "type": "object"
+      },
+      "DemoReviewInput": {
+        "additionalProperties": false,
+        "properties": {
+          "demo_decision": {
+            "enum": ["NEEDS_REVIEW", "REVIEWED", "REQUEST_NEW_RECORDING"],
+            "title": "Demo Decision",
+            "type": "string"
+          },
+          "expected_revision": {
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "notes": {
+            "maxLength": 2000,
+            "title": "Notes",
+            "type": "string"
+          },
+          "reviewed": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "title": "Reviewed",
+            "type": "array"
+          }
+        },
+        "required": ["expected_revision", "notes", "demo_decision"],
+        "title": "DemoReviewInput",
+        "type": "object"
       },
       "DemoScenario": {
         "additionalProperties": false,
@@ -872,6 +953,20 @@
         "title": "NumericConstraint",
         "type": "object"
       },
+      "OperatorLogin": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": ["token"],
+        "title": "OperatorLogin",
+        "type": "object"
+      },
       "PolarityConstraint": {
         "additionalProperties": false,
         "properties": {
@@ -1025,6 +1120,27 @@
             "title": "Notice",
             "type": "string"
           },
+          "reference_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScriptPolicy-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Revision"
+          },
           "runs": {
             "title": "Runs",
             "type": "integer"
@@ -1082,6 +1198,86 @@
         },
         "required": ["id", "state", "expires_at", "runs"],
         "title": "QuickReport",
+        "type": "object"
+      },
+      "ReferenceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "instructions": {
+            "items": {
+              "$ref": "#/components/schemas/ReferenceStep"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Instructions",
+            "type": "array"
+          },
+          "requirements": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "numeric": "#/components/schemas/NumericConstraint",
+                  "polarity": "#/components/schemas/PolarityConstraint",
+                  "sequence": "#/components/schemas/SequenceConstraint",
+                  "warning": "#/components/schemas/WarningConstraint"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/NumericConstraint"
+                },
+                {
+                  "$ref": "#/components/schemas/PolarityConstraint"
+                },
+                {
+                  "$ref": "#/components/schemas/WarningConstraint"
+                },
+                {
+                  "$ref": "#/components/schemas/SequenceConstraint"
+                }
+              ]
+            },
+            "maxItems": 30,
+            "title": "Requirements",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["expected_revision", "title", "instructions"],
+        "title": "ReferenceInput",
+        "type": "object"
+      },
+      "ReferenceStep": {
+        "additionalProperties": false,
+        "properties": {
+          "alternatives": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": ["text"],
+        "title": "ReferenceStep",
         "type": "object"
       },
       "ReviewPolicy": {
@@ -2174,6 +2370,103 @@
         "required": ["workflow", "approved_policy", "audio_artifact"],
         "title": "WorkflowView",
         "type": "object"
+      },
+      "WorkspaceState": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "default": 0,
+            "title": "Changes",
+            "type": "integer"
+          },
+          "demo_decision": {
+            "anyOf": [
+              {
+                "enum": ["NEEDS_REVIEW", "REVIEWED", "REQUEST_NEW_RECORDING"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demo Decision"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DemoEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScriptPolicy-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference_version": {
+            "default": 0,
+            "title": "Reference Version",
+            "type": "integer"
+          },
+          "reviewed": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Reviewed",
+            "type": "array"
+          },
+          "revision": {
+            "default": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "WorkspaceState",
+        "type": "object"
+      },
+      "WorkspaceView": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/QuickReport"
+          },
+          "notice": {
+            "default": "Temporary demo only. Visitor reference and evidence are not organizational approval, authenticated reviewer identity or release authorization. Data expires after 30 minutes.",
+            "title": "Notice",
+            "type": "string"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/WorkspaceState"
+          }
+        },
+        "required": ["workspace", "analysis"],
+        "title": "WorkspaceView",
+        "type": "object"
       }
     }
   },
@@ -2237,6 +2530,73 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/operator/session": {
+      "delete": {
+        "operationId": "logout_operator_session_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Logout",
+        "tags": ["private operator authentication"]
+      },
+      "get": {
+        "operationId": "status_operator_session_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": ["private operator authentication"]
+      },
+      "post": {
+        "operationId": "login_operator_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": ["private operator authentication"]
       }
     },
     "/quick/analyze": {
@@ -3993,6 +4353,462 @@
           }
         },
         "summary": "Verify Transcript"
+      }
+    },
+    "/workspace/analyze": {
+      "post": {
+        "operationId": "analyze_workspace_analyze_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "expected_revision",
+            "required": true,
+            "schema": {
+              "title": "Expected Revision",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "const": "local",
+              "default": "local",
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_analyze_workspace_analyze_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/audio": {
+      "get": {
+        "operationId": "audio_workspace_audio_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audio",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/config": {
+      "get": {
+        "operationId": "config_workspace_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Config",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/evidence": {
+      "put": {
+        "operationId": "correct_workspace_evidence_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HumanTranscriptInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Correct",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/export": {
+      "get": {
+        "operationId": "view_workspace_export_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "View",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/reference": {
+      "put": {
+        "operationId": "save_reference_workspace_reference_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Reference",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/review": {
+      "put": {
+        "operationId": "review_workspace_review_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoReviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/session": {
+      "delete": {
+        "operationId": "delete_workspace_session_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete",
+        "tags": ["temporary custom review"]
+      },
+      "get": {
+        "operationId": "view_workspace_session_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "View",
+        "tags": ["temporary custom review"]
+      }
+    },
+    "/workspace/sessions": {
+      "post": {
+        "operationId": "create_workspace_sessions_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Create",
+        "tags": ["temporary custom review"]
       }
     }
   }

@@ -16,6 +16,12 @@ approved exact committed/pushed revision; never deploy a moving `main` reference
 
 ## Configuration
 
+For the new no-login custom flow see [Public Workspace](PUBLIC_WORKSPACE.md).
+Keep `DUBGUARD_PUBLIC_WORKSPACE=false` until the reviewed release is approved,
+backed up and validated. Its independent flag enables only temporary `/workspace`
+sessions, never private reviewer APIs. Operator UI credentials are now exchanged
+for expiring HttpOnly cookies; operators sign in again after this update.
+
 Private API configuration belongs in the existing `/etc/dubguard/server.env`,
 root-owned mode 0600, outside Git/build context. Do not loosen permissions to make
 an unprivileged Compose invocation work. Compose interpolation (domain, server-env

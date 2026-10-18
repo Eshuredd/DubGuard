@@ -13,16 +13,22 @@ import { QuickTest } from "./pages/QuickTest";
 import { Login, Dashboard, NewReview } from "./pages/Dashboard";
 import { Policies } from "./pages/Policies";
 import { ReviewPage } from "./pages/ReviewPage";
-import { token } from "./api";
+import { PublicWorkspace } from "./pages/PublicWorkspace";
+import { operatorSignedIn, request } from "./api";
 import { Icon } from "./components/Icon";
 import "./studio.css";
 function Guard({ children }: { children: React.ReactNode }) {
-  return token() ? children : <Navigate to="/login" replace />;
+  return operatorSignedIn() ? (
+    children
+  ) : (
+    <Navigate to="/operator/login" replace />
+  );
 }
 function Shell() {
   const location = useLocation(),
     navigate = useNavigate();
   React.useEffect(() => {
+    sessionStorage.removeItem("dubguard-reviewer");
     document
       .querySelector<HTMLDetailsElement>(".mobile-navigation")
       ?.removeAttribute("open");
@@ -43,38 +49,51 @@ function Shell() {
         </NavLink>
         <span className="sidebar-label">WORKSPACE</span>
         <nav className="sidebar-nav" aria-label="Workspace">
-          <a href="/review#workspace-overview">
-            <Icon name="grid" />
-            Overview
-          </a>
           <NavLink to="/test">
             <Icon name="wave" />
-            Quick Test
+            Try a Sample
           </NavLink>
-          <NavLink to="/review" end>
-            <Icon name="queue" />
-            Review queue
-          </NavLink>
-          <NavLink to="/review/new">
+          <NavLink to="/workspace">
             <Icon name="plus" />
-            New recording
+            Create a Review
           </NavLink>
-          <NavLink to="/policies">
-            <Icon name="script" />
-            Policies
-          </NavLink>
+          {operatorSignedIn() && (
+            <>
+              <span className="sidebar-label">PRIVATE OPERATOR</span>
+              <a href="/review#workspace-overview">
+                <Icon name="grid" />
+                Overview
+              </a>
+              <NavLink to="/review" end>
+                <Icon name="queue" />
+                Review queue
+              </NavLink>
+              <NavLink to="/review/new">
+                <Icon name="plus" />
+                New recording
+              </NavLink>
+              <NavLink to="/policies">
+                <Icon name="script" />
+                Policies
+              </NavLink>
+              <a href="/review?view=history">
+                <Icon name="queue" />
+                Review history
+              </a>
+            </>
+          )}
         </nav>
-        <a className="sidebar-history" href="/review?view=history">
-          <Icon name="queue" />
-          Review history
-        </a>
+        <NavLink className="sidebar-history" to="/operator">
+          <Icon name="shield" />
+          {operatorSignedIn() ? "Operator workspace" : "Operator access"}
+        </NavLink>
         <div className="sidebar-principle">
           <Icon name="shield" size={26} />
           <strong>Evidence before approval.</strong>
           <p>
-            AI assists the review.
+            Your demo stays isolated.
             <br />
-            People make the decision.
+            Release sign-off stays protected.
           </p>
         </div>
         <div className="sidebar-bottom">
@@ -92,31 +111,39 @@ function Shell() {
             <strong>
               {location.pathname === "/test"
                 ? "Quick Test"
-                : location.pathname === "/policies"
-                  ? "Scripts & policies"
-                  : location.pathname === "/login"
-                    ? "Reviewer access"
-                    : location.pathname === "/review"
-                      ? "Review queue"
-                      : "Evidence review"}
+                : location.pathname === "/workspace"
+                  ? "Create a Review"
+                  : location.pathname === "/policies"
+                    ? "Scripts & policies"
+                    : location.pathname === "/login" ||
+                        location.pathname === "/operator/login"
+                      ? "Reviewer access"
+                      : location.pathname === "/review"
+                        ? "Review queue"
+                        : "Evidence review"}
             </strong>
           </div>
           <nav aria-label="Main navigation">
-            <NavLink to="/test">Try DubGuard</NavLink>
-            <NavLink to="/review">Reviewer Workspace</NavLink>
-            {token() ? (
+            <NavLink to="/test">Try a Sample</NavLink>
+            <NavLink to="/workspace">Create a Review</NavLink>
+            {operatorSignedIn() ? (
               <button
                 className="text-button"
-                onClick={() => {
-                  sessionStorage.removeItem("dubguard-reviewer");
-                  navigate("/login");
+                onClick={async () => {
+                  sessionStorage.removeItem("dubguard-operator");
+                  await request(
+                    "/operator/session",
+                    { method: "DELETE", keepalive: true },
+                    "",
+                  );
+                  navigate("/test");
                 }}
               >
                 Sign out
               </button>
             ) : (
               <span className="nav-note">
-                <Icon name="shield" size={14} /> Protected workspace
+                <Icon name="shield" size={14} /> Temporary & isolated
               </span>
             )}
           </nav>
@@ -126,16 +153,25 @@ function Shell() {
             <Icon name="menu" /> DubGuard <span>Workspace menu</span>
           </summary>
           <nav aria-label="Mobile workspace">
-            <NavLink to="/test">Quick Test</NavLink>
-            <NavLink to="/review">Review queue</NavLink>
-            <NavLink to="/review/new">New recording</NavLink>
-            <NavLink to="/policies">Policies</NavLink>
+            <NavLink to="/test">Try a Sample</NavLink>
+            <NavLink to="/workspace">Create a Review</NavLink>
+            <NavLink to="/operator">Operator access</NavLink>
           </nav>
         </details>
         <main id="main" key={location.pathname}>
           <Routes>
             <Route path="/" element={<Navigate to="/test" replace />} />
             <Route path="/test" element={<QuickTest />} />
+            <Route path="/workspace" element={<PublicWorkspace />} />
+            <Route
+              path="/operator"
+              element={
+                <Guard>
+                  <Dashboard />
+                </Guard>
+              }
+            />
+            <Route path="/operator/login" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route
               path="/review"

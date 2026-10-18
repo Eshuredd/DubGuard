@@ -4,7 +4,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../..");
 const config = readFileSync(
-  resolve(root, process.env.DUBGUARD_CONTAINER_ENV || ".dubguard-data/phase5/server.env"),
+  resolve(
+    root,
+    process.env.DUBGUARD_CONTAINER_ENV || ".dubguard-data/phase5/server.env",
+  ),
   "utf8",
 );
 const value = (name: string) =>
@@ -59,7 +62,7 @@ test("production SPA, CSP, private upload and real CPU ASR remain provisional", 
     page.getByRole("heading", { name: "Recognized narration · provisional" }),
   ).toBeVisible();
   await expect(
-    page.getByText("review required", { exact: true }),
+    page.getByText("review required", { exact: true }).first(),
   ).toBeVisible();
   await page.reload();
   await expect(

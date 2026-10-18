@@ -38,6 +38,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/operator/session": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Status */
+    get: operations["status_operator_session_get"];
+    put?: never;
+    /** Login */
+    post: operations["login_operator_session_post"];
+    /** Logout */
+    delete: operations["logout_operator_session_delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/quick/analyze": {
     parameters: {
       query?: never;
@@ -553,6 +572,160 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/workspace/analyze": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Analyze */
+    post: operations["analyze_workspace_analyze_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/audio": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Audio */
+    get: operations["audio_workspace_audio_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/config": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Config */
+    get: operations["config_workspace_config_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/evidence": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Correct */
+    put: operations["correct_workspace_evidence_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** View */
+    get: operations["view_workspace_export_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/reference": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Save Reference */
+    put: operations["save_reference_workspace_reference_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Review */
+    put: operations["review_workspace_review_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/session": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** View */
+    get: operations["view_workspace_session_get"];
+    put?: never;
+    post?: never;
+    /** Delete */
+    delete: operations["delete_workspace_session_delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/workspace/sessions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create */
+    post: operations["create_workspace_sessions_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -767,6 +940,14 @@ export interface components {
        */
       file: string;
     };
+    /** Body_analyze_workspace_analyze_post */
+    Body_analyze_workspace_analyze_post: {
+      /**
+       * File
+       * Format: binary
+       */
+      file: string;
+    };
     /** Body_upload_audio_review_artifacts_post */
     Body_upload_audio_review_artifacts_post: {
       /**
@@ -789,6 +970,37 @@ export interface components {
      * @enum {string}
      */
     Decision: "PASS_CANDIDATE" | "CRITICAL_DEVIATION" | "REVIEW_REQUIRED";
+    /** DemoEvidence */
+    DemoEvidence: {
+      /** Audio Sha256 */
+      audio_sha256: string;
+      /**
+       * Provenance
+       * @default anonymous visitor attestation; not authenticated reviewer evidence
+       * @constant
+       */
+      provenance: "anonymous visitor attestation; not authenticated reviewer evidence";
+      /** Raw Run */
+      raw_run: number;
+      /** Reason */
+      reason: string;
+      result: components["schemas"]["ReviewResult"];
+      transcript: components["schemas"]["Transcript"];
+    };
+    /** DemoReviewInput */
+    DemoReviewInput: {
+      /**
+       * Demo Decision
+       * @enum {string}
+       */
+      demo_decision: "NEEDS_REVIEW" | "REVIEWED" | "REQUEST_NEW_RECORDING";
+      /** Expected Revision */
+      expected_revision: number;
+      /** Notes */
+      notes: string;
+      /** Reviewed */
+      reviewed?: number[];
+    };
     /** DemoScenario */
     DemoScenario: {
       /** Description */
@@ -901,6 +1113,11 @@ export interface components {
        */
       kind: "numeric";
     };
+    /** OperatorLogin */
+    OperatorLogin: {
+      /** Token */
+      token: string;
+    };
     /** PolarityConstraint */
     PolarityConstraint: {
       /** Approved Phrase */
@@ -962,6 +1179,9 @@ export interface components {
        * @default Demonstration fixture only. Never a human release approval. Local ASR is provisional.
        */
       notice: string;
+      reference_policy?: components["schemas"]["ScriptPolicy-Output"] | null;
+      /** Reference Revision */
+      reference_revision?: number | null;
       /** Runs */
       runs: number;
       /** Scenario Id */
@@ -976,6 +1196,29 @@ export interface components {
       state: string;
       transcription?: components["schemas"]["TranscriptionResult"] | null;
       verification?: components["schemas"]["ReviewResult"] | null;
+    };
+    /** ReferenceInput */
+    ReferenceInput: {
+      /** Expected Revision */
+      expected_revision: number;
+      /** Instructions */
+      instructions: components["schemas"]["ReferenceStep"][];
+      /** Requirements */
+      requirements?: (
+        | components["schemas"]["NumericConstraint"]
+        | components["schemas"]["PolarityConstraint"]
+        | components["schemas"]["WarningConstraint"]
+        | components["schemas"]["SequenceConstraint"]
+      )[];
+      /** Title */
+      title: string;
+    };
+    /** ReferenceStep */
+    ReferenceStep: {
+      /** Alternatives */
+      alternatives?: string[];
+      /** Text */
+      text: string;
     };
     /** ReviewPolicy */
     ReviewPolicy: {
@@ -1350,6 +1593,53 @@ export interface components {
         components["schemas"]["VerifiedTranscriptEvidence"] | null;
       workflow: components["schemas"]["WorkflowState"];
     };
+    /** WorkspaceState */
+    WorkspaceState: {
+      /**
+       * Changes
+       * @default 0
+       */
+      changes: number;
+      /** Demo Decision */
+      demo_decision?:
+        ("NEEDS_REVIEW" | "REVIEWED" | "REQUEST_NEW_RECORDING") | null;
+      /** Events */
+      events?: string[];
+      evidence?: components["schemas"]["DemoEvidence"] | null;
+      /**
+       * Notes
+       * @default
+       */
+      notes: string;
+      reference?: components["schemas"]["ScriptPolicy-Output"] | null;
+      /**
+       * Reference Version
+       * @default 0
+       */
+      reference_version: number;
+      /** Reviewed */
+      reviewed?: number[];
+      /**
+       * Revision
+       * @default 0
+       */
+      revision: number;
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+    };
+    /** WorkspaceView */
+    WorkspaceView: {
+      analysis: components["schemas"]["QuickReport"];
+      /**
+       * Notice
+       * @default Temporary demo only. Visitor reference and evidence are not organizational approval, authenticated reviewer identity or release authorization. Data expires after 30 minutes.
+       */
+      notice: string;
+      workspace: components["schemas"]["WorkspaceState"];
+    };
   };
   responses: never;
   parameters: never;
@@ -1391,6 +1681,79 @@ export interface operations {
     };
   };
   health_health_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  status_operator_session_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  login_operator_session_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OperatorLogin"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  logout_operator_session_delete: {
     parameters: {
       query?: never;
       header?: never;
@@ -2463,6 +2826,313 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  analyze_workspace_analyze_post: {
+    parameters: {
+      query: {
+        expected_revision: number;
+        mode?: "local";
+      };
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_analyze_workspace_analyze_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  audio_workspace_audio_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  config_workspace_config_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  correct_workspace_evidence_put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["HumanTranscriptInput"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  view_workspace_export_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkspaceView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_reference_workspace_reference_put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReferenceInput"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  review_workspace_review_put: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DemoReviewInput"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  view_workspace_session_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkspaceView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_workspace_session_delete: {
+    parameters: {
+      query?: never;
+      header?: {
+        authorization?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_workspace_sessions_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
     };

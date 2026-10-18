@@ -213,15 +213,16 @@ export function QuickTest() {
               </p>
               <div className="actions">
                 <a className="button" href="#quick-start">
-                  Try DubGuard <span aria-hidden="true">↗</span>
+                  Try a Sample <span aria-hidden="true">↗</span>
                 </a>
-                <Link className="button secondary" to="/review">
-                  Reviewer Workspace
+                <Link className="button secondary" to="/workspace">
+                  Create Your Own Review
                 </Link>
               </div>
               <p className="hero-audience">
-                Quick Test: a temporary demo. Reviewer Workspace: saved evidence
-                and human sign-off.
+                Try one of six samples, or create your own reference script and
+                protected requirements. Public custom reviews require no
+                sign-in.
               </p>
               {sessionEntry}
             </div>

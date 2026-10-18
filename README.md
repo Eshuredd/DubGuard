@@ -101,7 +101,11 @@ npm --prefix frontend run dev
 ```
 
 Open [localhost Quick Test](http://127.0.0.1:5173/test) or
-[localhost reviewer login](http://127.0.0.1:5173/login). Vite proxies `/api` to
+[Create a Review](http://127.0.0.1:5173/workspace). The custom workspace opens
+without login. Enable `DUBGUARD_PUBLIC_WORKSPACE=true` only after validating its
+isolation and limits; its safe default is false. Private operational reviews use
+`/operator`. See [configuration and upgrade notes](PUBLIC_WORKSPACE.md).
+Vite proxies `/api` to
 FastAPI; the [local API schema](http://127.0.0.1:8000/docs) describes request bodies.
 Recording requires HTTPS or localhost. Runtime never downloads missing models.
 Use the [local container protocol](DEPLOYMENT.md#local-container-validation) to

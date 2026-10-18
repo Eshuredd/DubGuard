@@ -4,7 +4,6 @@ import {
   request,
   post,
   upload,
-  token,
   type Summary,
   type PolicyRecord,
 } from "../api";
@@ -28,16 +27,16 @@ export function Login() {
         recording; this workspace preserves professional review history.
       </p>
       <p>
-        Your token stays in this browser tab’s session storage. Sign out to
-        remove it.
+        Private operator access only. Your reviewer credential is exchanged for
+        an expiring HttpOnly cookie and is never saved in browser storage.
       </p>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
           try {
-            await request("/review/workflows?limit=1", {}, value);
-            sessionStorage.setItem("dubguard-reviewer", value);
+            await post("/operator/session", { token: value }, "");
+            sessionStorage.setItem("dubguard-operator", "signed-in");
             setValue("");
             navigate("/review");
           } catch (e) {

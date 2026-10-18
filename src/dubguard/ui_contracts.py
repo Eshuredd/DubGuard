@@ -61,6 +61,8 @@ class DemoScenario(Model):
     policy: ScriptPolicy
 
 class QuickReport(Model):
+    reference_policy: ScriptPolicy | None = None
+    reference_revision: int | None = None
     id: str
     state: str
     expires_at: float

@@ -548,7 +548,7 @@ test("keyboard navigation reaches the demo and changes scenario without a pointe
   );
   await page
     .getByRole("navigation", { name: "Mobile workspace" })
-    .getByRole("link", { name: "Policies", exact: true })
+    .getByRole("link", { name: "Operator access", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Reviewer access" }),

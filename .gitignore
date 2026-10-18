@@ -14,6 +14,7 @@ dist/
 frontend/node_modules/
 frontend/playwright-report/
 frontend/test-results/
+frontend/test-results-container/
 frontend/*.tsbuildinfo
 
 # Local tool caches and test outputs.

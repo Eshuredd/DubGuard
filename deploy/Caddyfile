@@ -18,13 +18,17 @@
     request_body {
         max_size 26MB
     }
-    @quick_upload path /api/quick/analyze
+    @quick_upload path /api/quick/analyze /api/workspace/analyze
     request_body @quick_upload {
         max_size 10065536
     }
-    @quick_session path /api/quick/sessions
+    @quick_session path /api/quick/sessions /api/workspace/sessions /api/operator/session
     request_body @quick_session {
         max_size 4096
+    }
+    @workspace_edit path /api/workspace/reference /api/workspace/evidence /api/workspace/review
+    request_body @workspace_edit {
+        max_size 32768
     }
     handle_path /api/* {
         reverse_proxy api:8000 {

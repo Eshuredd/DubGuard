@@ -1,4 +1,78 @@
 @layer reset, system, layout, components, responsive;
+@layer components {
+  #custom-analyze {
+    margin-top: 16px;
+  }
+  .custom-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  .custom-editor-grid h2,
+  #custom-audio h2 {
+    margin: 8px 0 14px;
+  }
+  .custom-editor-grid fieldset {
+    margin-top: 16px;
+  }
+  .custom-editor-grid .editor-block {
+    margin: 16px 0;
+  }
+  .custom-editor-grid .help,
+  #custom-evidence .help {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 12px 0;
+  }
+  #custom-evidence > h2,
+  #custom-evidence .two-column {
+    margin: 20px 0;
+  }
+  #custom-evidence .identity {
+    display: block;
+    margin: 12px 0;
+    overflow-wrap: anywhere;
+  }
+  .visitor-corrections {
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+  }
+  .visitor-corrections > summary {
+    font-weight: 650;
+  }
+  .visitor-corrections fieldset {
+    margin-top: 18px;
+  }
+  .visitor-corrections .editor-block {
+    margin: 18px 0;
+  }
+  .custom-empty {
+    border-style: dashed;
+  }
+}
+@layer responsive {
+  @media (max-width: 1000px) {
+    .custom-editor-grid {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+  @media (max-width: 600px) {
+    .visitor-corrections {
+      padding: 12px;
+    }
+    .template-actions {
+      gap: 8px;
+    }
+    #custom-audio .section-heading {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+  }
+}
 @layer reset {
   * {
     box-sizing: border-box;

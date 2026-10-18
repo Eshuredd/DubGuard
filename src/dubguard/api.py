@@ -4,7 +4,7 @@ from typing import Literal
 import asyncio
 from contextlib import asynccontextmanager
 from starlette.concurrency import run_in_threadpool
-from fastapi import Header
+from fastapi import Header, Request
 from .review import reviewer, _store
 from .quick import router as quick_router, cleanup, recover_interrupted
 
@@ -40,6 +40,10 @@ app = FastAPI(lifespan=lifespan, title="DubGuard — Industrial Narration Review
               description="English single-speaker text review. PASS_CANDIDATE is not safety certification or release approval.")
 app.include_router(review_router)
 app.include_router(quick_router)
+from .workspace import router as workspace_router
+app.include_router(workspace_router)
+from .operator_auth import router as operator_router
+app.include_router(operator_router)
 from .quick_admission import QuickAdmissionMiddleware
 app.add_middleware(QuickAdmissionMiddleware)
 
@@ -71,9 +75,9 @@ def ready():
 
 
 @app.post("/verify", response_model=ReviewResult)
-def verify_transcript(payload: VerificationRequest, mode: Literal["deterministic", "hybrid"] = "deterministic", authorization: str | None = Header(default=None)):
+def verify_transcript(payload: VerificationRequest, request: Request, mode: Literal["deterministic", "hybrid"] = "deterministic", authorization: str | None = Header(default=None)):
     if mode == "hybrid":
-        reviewer(authorization)
+        reviewer(authorization, request)
     return verify(payload, hybrid=mode == "hybrid")
 
 

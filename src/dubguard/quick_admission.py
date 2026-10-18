@@ -17,7 +17,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 
-from .quick import MAX_BYTES, authorize_amd, database, session
+from .quick import MAX_BYTES, authorize_amd, database, resolve_session
 
 _UPLOAD_SLOTS = BoundedSemaphore(2)
 _ACTIVE_CLIENTS: set[str] = set()
@@ -57,7 +57,10 @@ def bounded_limit(name, default, maximum):
 
 def charge(address, kind):
     now = time.time()
-    limit = bounded_limit("DUBGUARD_CLIENT_SESSIONS_PER_HOUR", 4, 30) if kind == "session" else bounded_limit("DUBGUARD_CLIENT_UPLOADS_PER_HOUR", 6, 90)
+    limit = (bounded_limit("DUBGUARD_CLIENT_SESSIONS_PER_HOUR", 4, 30) if kind == "session" else
+             bounded_limit("DUBGUARD_OPERATOR_LOGINS_PER_HOUR", 8, 30) if kind == "operator_login" else
+             bounded_limit("DUBGUARD_CLIENT_EDITS_PER_HOUR", 60, 120) if kind == "edit" else
+             bounded_limit("DUBGUARD_CLIENT_UPLOADS_PER_HOUR", 6, 90))
     with database() as db:
         db.execute("DELETE FROM client_events WHERE created<?", (now - 3600,))
         secret = db.execute("SELECT value FROM accounting_secret").fetchone()[0]
@@ -70,8 +73,11 @@ def charge(address, kind):
     return digest
 
 
-def preflight(headers, query, address):
-    identity = session(headers.get("authorization"))
+def preflight(headers, query, address, scope="sample"):
+    identity = resolve_session(headers.get("authorization"), scope)
+    if scope == "custom":
+        from .workspace import require_enabled
+        require_enabled()
     # Authenticated upload attempts consume client budget even when AMD code,
     # consent or subsequent quotas reject them. No credential guessing loop.
     digest = charge(address, "upload")
@@ -79,6 +85,8 @@ def preflight(headers, query, address):
     if len(mode) != 1 or mode[0] not in {"local", "amd"}:
         raise HTTPException(422, "Choose a supported verification mode")
     if mode[0] == "amd":
+        if scope == "custom":
+            raise HTTPException(403, "Custom workspace supports local verification only; AMD remains separately protected in Quick Test")
         consent = query.get("consent", [])
         authorize_amd(headers.get("x-amd-demo-code", ""), len(consent) == 1 and consent[0].lower() in {"true", "1", "yes", "on"})
     with database() as db:
@@ -97,19 +105,23 @@ class QuickAdmissionMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or scope["method"] != "POST" or scope["path"] not in {"/quick/analyze", "/quick/sessions"}:
+        paths = {"/operator/session", "/quick/analyze", "/quick/sessions", "/workspace/analyze", "/workspace/sessions", "/workspace/reference", "/workspace/evidence", "/workspace/review"}
+        if scope["type"] != "http" or scope["method"] not in {"POST", "PUT"} or scope["path"] not in paths:
             return await self.app(scope, receive, send)
         headers = Headers(scope=scope)
         acquired = False
         digest = None
         try:
             address = client_address(scope, headers)
-            upload = scope["path"] == "/quick/analyze"
+            upload = scope["path"].endswith("/analyze")
+            custom = scope["path"].startswith("/workspace/")
+            metadata = scope["method"] == "PUT"
+            maximum = MAX_BODY if upload else 32768 if metadata else 4096
             try:
                 length = int(headers.get("content-length", "0"))
             except ValueError:
                 raise HTTPException(400, "Invalid request length")
-            if length < 0 or length > (MAX_BODY if upload else 4096):
+            if length < 0 or length > maximum:
                 raise HTTPException(413, "Demo request is too large; audio limit is 10 MB")
             if upload:
                 query = parse_qs(scope.get("query_string", b"").decode("ascii", errors="replace"))
@@ -117,9 +129,14 @@ class QuickAdmissionMiddleware:
                 # may select a different value than an early authorization check.
                 if any(len(values) != 1 for values in query.values()):
                     raise HTTPException(422, "Repeated parameters are not supported")
-                digest = await run_in_threadpool(preflight, headers, query, address)
+                digest = await run_in_threadpool(preflight, headers, query, address, "custom" if custom else "sample")
+            elif metadata:
+                await run_in_threadpool(resolve_session, headers.get("authorization"), "custom")
+                from .workspace import require_enabled
+                require_enabled()
+                digest = await run_in_threadpool(charge, address, "edit")
             else:
-                digest = await run_in_threadpool(charge, address, "session")
+                digest = await run_in_threadpool(charge, address, "operator_login" if scope["path"] == "/operator/session" else "session")
             if upload:
                 with _LOCK:
                     if digest in _ACTIVE_CLIENTS or not _UPLOAD_SLOTS.acquire(blocking=False):
@@ -135,7 +152,7 @@ class QuickAdmissionMiddleware:
                     if message["type"] == "http.disconnect":
                         return
                     chunk = message.get("body", b"")
-                    if len(body) + len(chunk) > (MAX_BODY if upload else 4096):
+                    if len(body) + len(chunk) > maximum:
                         raise HTTPException(413, "Demo request is too large; audio limit is 10 MB")
                     body.extend(chunk)
                     if not message.get("more_body", False):

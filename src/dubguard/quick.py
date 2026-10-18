@@ -51,6 +51,11 @@ def database():
         db.execute("INSERT OR IGNORE INTO accounting_secret VALUES (1,?)", (secrets.token_hex(32),))
         if "amd_runs" not in {r["name"] for r in db.execute("PRAGMA table_info(sessions)")}:
             db.execute("ALTER TABLE sessions ADD COLUMN amd_runs INTEGER NOT NULL DEFAULT 0")
+        columns = {r["name"] for r in db.execute("PRAGMA table_info(sessions)")}
+        if "scope" not in columns:
+            db.execute("ALTER TABLE sessions ADD COLUMN scope TEXT NOT NULL DEFAULT 'sample'")
+        if "custom" not in columns:
+            db.execute("ALTER TABLE sessions ADD COLUMN custom TEXT")
         db.commit()
         db.execute("BEGIN IMMEDIATE")
         yield db
@@ -72,14 +77,18 @@ def cleanup():
         db.execute("DELETE FROM client_events WHERE created<?", (time.time()-3600,))
 
 
-def session(authorization: str | None = Header(default=None)) -> str:
+def resolve_session(authorization: str | None, scope: str = "sample") -> str:
     cleanup()
     supplied = authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
     with database() as db:
-        row = db.execute("SELECT id FROM sessions WHERE digest=? AND expires>?", (sha256(supplied.encode()).hexdigest(), time.time())).fetchone()
+        row = db.execute("SELECT id FROM sessions WHERE digest=? AND expires>? AND scope=?", (sha256(supplied.encode()).hexdigest(), time.time(), scope)).fetchone()
     if not row:
         raise HTTPException(401, "Quick Test session is missing or expired")
     return row["id"]
+
+
+def session(authorization: str | None = Header(default=None)) -> str:
+    return resolve_session(authorization)
 
 
 @router.get("/scenarios", response_model=list[DemoScenario])
@@ -134,6 +143,10 @@ def create_session(x_demo_code: str = Header(default="")):
         raise HTTPException(503, "Quick Test is disabled; operator must configure a demo access code")
     if not public_local_enabled() and not hmac.compare_digest(expected.encode(), x_demo_code.encode()):
         raise HTTPException(401, "Valid demo access code required")
+    return new_session("sample")
+
+
+def new_session(scope: str):
     cleanup()
     token, identity = secrets.token_urlsafe(32), uuid4().hex
     with database() as db:
@@ -141,7 +154,7 @@ def create_session(x_demo_code: str = Header(default="")):
             raise HTTPException(429, "Demo session quota reached; retry later")
         now = time.time()
         db.execute("INSERT INTO admissions VALUES (?)", (now,))
-        db.execute("INSERT INTO sessions (id,digest,expires,created,state,runs,payload) VALUES (?,?,?,?,?,?,?)", (identity, sha256(token.encode()).hexdigest(), now+TTL, now, "EMPTY", 0, "{}"))
+        db.execute("INSERT INTO sessions (id,digest,expires,created,state,runs,payload,scope) VALUES (?,?,?,?,?,?,?,?)", (identity, sha256(token.encode()).hexdigest(), now+TTL, now, "EMPTY", 0, "{}", scope))
     return {"token": token, "id": identity, "expires_at": now+TTL, "max_runs": 3, "max_seconds": MAX_SECONDS, "max_bytes": MAX_BYTES}
 
 
@@ -161,14 +174,17 @@ def analyze_job(*args):
         _DEMO_SLOTS.release()
 
 
-def _analyze_job(identity: str, data: bytes, content_type: str, scenario_id: str, mode: str = "local", consented_at: float | None = None):
+def _analyze_job(identity: str, data: bytes, content_type: str, scenario_id: str | None, mode: str = "local", consented_at: float | None = None,
+                 reference: ScriptPolicy | None = None, reference_revision: int | None = None):
     # Each job has an isolated directory. A deleted/expired session cannot be resurrected.
     root = _root() / "quick" / identity
     payload = {"scenario_id": scenario_id, "mode": mode, "consented_at": consented_at,
                "semantic_status": "pending_transcription" if mode == "amd" else "not_requested"}
     state = "FAILED"
+    if reference is not None:
+        payload.update(reference_policy=reference.model_dump(mode="json"), reference_revision=reference_revision)
     try:
-        policy = next(item.policy for item in scenarios() if item.id == scenario_id)
+        policy = reference or next(item.policy for item in scenarios() if item.id == scenario_id)
         audio = AudioStore(root)
         artifact = audio.ingest(data, content_type=content_type, max_bytes=MAX_BYTES, max_seconds=MAX_SECONDS)
         payload["artifact"] = artifact.model_dump(mode="json")
@@ -225,6 +241,10 @@ async def analyze(tasks: BackgroundTasks, scenario_id: str, file: UploadFile = F
     await file.close()
     if not data or len(data)>MAX_BYTES:
         raise HTTPException(413, "Demo audio must be nonempty and at most 10 MB")
+    return enqueue_analysis(tasks, identity, data, file.content_type or "", scenario_id, mode)
+
+
+def enqueue_analysis(tasks, identity, data, content_type, scenario_id=None, mode="local", reference=None, reference_revision=None, expected_revision=None):
     if not _DEMO_SLOTS.acquire(blocking=False):
         raise HTTPException(429, "Two demo jobs are already running; wait for completion")
     try:
@@ -232,6 +252,13 @@ async def analyze(tasks: BackgroundTasks, scenario_id: str, file: UploadFile = F
             row = db.execute("SELECT * FROM sessions WHERE id=?", (identity,)).fetchone()
             if not row or row["expires"] <= time.time():
                 raise HTTPException(401, "Session expired")
+            if reference is not None:
+                document = json.loads(row["custom"])
+                if document["revision"] != expected_revision:
+                    raise HTTPException(409, "Reference changed; reload before analyzing")
+                document.update(evidence=None, reviewed=[], demo_decision=None)
+                document["revision"] += 1
+                db.execute("UPDATE sessions SET custom=? WHERE id=?", (json.dumps(document), identity))
             if row["state"] == "PROCESSING" or row["runs"] >= 3 or db.execute("SELECT count(*) FROM sessions WHERE state='PROCESSING'").fetchone()[0] >= 2:
                 raise HTTPException(429, "At most three attempts per session and two concurrent demo jobs; wait or start a new session")
             if mode == "amd" and (row["amd_runs"] >= 2 or db.execute("SELECT count(*) FROM sessions WHERE state='PROCESSING' AND json_extract(payload,'$.mode')='amd'").fetchone()[0] >= 1):
@@ -239,7 +266,7 @@ async def analyze(tasks: BackgroundTasks, scenario_id: str, file: UploadFile = F
             consented_at = time.time() if mode == "amd" else None
             shutil.rmtree(_root() / "quick" / identity, ignore_errors=True)
             db.execute("UPDATE sessions SET state='PROCESSING',runs=runs+1,amd_runs=amd_runs+?,payload=? WHERE id=?", (int(mode == "amd"), json.dumps({"scenario_id": scenario_id, "mode": mode, "consented_at": consented_at, "semantic_status": "pending_transcription" if mode == "amd" else "not_requested"}), identity))
-        tasks.add_task(analyze_job, identity, data, file.content_type or "", scenario_id, mode, consented_at)
+        tasks.add_task(analyze_job, identity, data, content_type, scenario_id, mode, consented_at, reference, reference_revision)
     except BaseException:
         _DEMO_SLOTS.release()
         raise
@@ -253,9 +280,13 @@ def audio(identity: str = Depends(session)):
         raise HTTPException(404, "No audio available")
     artifact = report.artifact
     path = AudioStore(_root() / "quick" / identity).path_for(artifact.sha256, artifact.format)
-    if not path.exists() or sha256(path.read_bytes()).hexdigest() != artifact.sha256:
+    try:
+        original = path.read_bytes()
+    except OSError:
+        raise HTTPException(404, "Original audio missing or changed") from None
+    if sha256(original).hexdigest() != artifact.sha256:
         raise HTTPException(404, "Original audio missing or changed")
-    return Response(path.read_bytes(), media_type=AUDIO_MIME[artifact.format], headers={"Cache-Control": "no-store"})
+    return Response(original, media_type=AUDIO_MIME[artifact.format], headers={"Cache-Control": "no-store"})
 
 
 @router.delete("/session")

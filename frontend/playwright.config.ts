@@ -47,6 +47,9 @@ export default defineConfig({
           "e2e-reviewer": process.env.DUBGUARD_E2E_REVIEW_TOKEN,
         }),
         DUBGUARD_DEMO_ACCESS_CODE: process.env.DUBGUARD_E2E_DEMO_CODE,
+        DUBGUARD_PUBLIC_WORKSPACE: "true",
+        DUBGUARD_CLIENT_EDITS_PER_HOUR: "120",
+        DUBGUARD_OPERATOR_LOGINS_PER_HOUR: "30",
         DUBGUARD_AMD_DEMO_ACCESS_CODE: process.env.DUBGUARD_E2E_AMD_CODE,
         DUBGUARD_PUBLIC_LOCAL_DEMO:
           process.env.DUBGUARD_E2E_PUBLIC === "true" ? "true" : "false",

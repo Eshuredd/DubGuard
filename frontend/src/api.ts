@@ -21,7 +21,10 @@ export type Quick = Schema["QuickReport"];
 export type QuickConfig = Schema["QuickConfig"];
 export type Summary = Schema["WorkflowSummary"];
 export type PolicyRecord = Schema["PolicyRecord"];
-export const token = () => sessionStorage.getItem("dubguard-reviewer") || "";
+// Operator UI uses a server-issued HttpOnly cookie. Only this non-secret UI hint
+// is stored in the tab; every protected API still authenticates independently.
+export const operatorSignedIn = () =>
+  sessionStorage.getItem("dubguard-operator") === "signed-in";
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -33,7 +36,7 @@ export class ApiError extends Error {
 export async function request<T>(
   path: string,
   options: RequestInit = {},
-  credential = token(),
+  credential = "",
 ): Promise<T> {
   const headers = new Headers(options.headers);
   if (credential) headers.set("Authorization", `Bearer ${credential}`);
@@ -79,9 +82,9 @@ export const upload = (
     credential,
   );
 };
-export async function audioBlob(path: string, credential = token()) {
+export async function audioBlob(path: string, credential = "") {
   const r = await fetch("/api" + path, {
-    headers: { Authorization: `Bearer ${credential}` },
+    headers: credential ? { Authorization: `Bearer ${credential}` } : {},
     cache: "no-store",
   });
   if (!r.ok)

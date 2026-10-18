@@ -11,7 +11,7 @@ import sqlite3
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 from pydantic import Field
@@ -43,7 +43,7 @@ def _store():
     return ReviewStore(_root() / "review.sqlite3")
 
 
-def reviewer(authorization: str | None = Header(default=None)) -> str:
+def reviewer(authorization: str | None = Header(default=None), request: Request = None) -> str:
     """MVP shared-secret authentication. Tokens and mappings live only in env."""
     _load_project_env()
     raw = os.getenv("DUBGUARD_REVIEW_TOKENS_JSON", "")
@@ -58,7 +58,10 @@ def reviewer(authorization: str | None = Header(default=None)) -> str:
             for name, secret in tokens.items()):
         raise HTTPException(503, "Reviewer authentication configuration is invalid")
     supplied = authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
-    matched = [name for name, secret in tokens.items() if hmac.compare_digest(secret, supplied)]
+    if not authorization and request is not None:
+        from .operator_auth import cookie_identity
+        return cookie_identity(request)
+    matched = [name for name, secret in tokens.items() if hmac.compare_digest(secret.encode(), supplied.encode())]
     if len(matched) != 1:
         raise HTTPException(401, "Valid reviewer bearer token required")
     return matched[0]
