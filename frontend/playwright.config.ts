@@ -5,12 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 process.env.DUBGUARD_E2E_REVIEW_TOKEN ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_DEMO_CODE ||= randomBytes(32).toString("hex");
+process.env.DUBGUARD_E2E_AMD_CODE ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_DIR ||= mkdtempSync(join(tmpdir(), "dubguard-e2e-"));
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
   workers: 1,
-  timeout: 45_000,
+  timeout: 75_000,
   retries: 0,
   globalTeardown: "./tests/teardown.ts",
   use: {
@@ -45,6 +46,11 @@ export default defineConfig({
           "e2e-reviewer": process.env.DUBGUARD_E2E_REVIEW_TOKEN,
         }),
         DUBGUARD_DEMO_ACCESS_CODE: process.env.DUBGUARD_E2E_DEMO_CODE,
+        DUBGUARD_AMD_DEMO_ACCESS_CODE: process.env.DUBGUARD_E2E_AMD_CODE,
+        DUBGUARD_PUBLIC_LOCAL_DEMO:
+          process.env.DUBGUARD_E2E_PUBLIC === "true" ? "true" : "false",
+        DUBGUARD_CLIENT_SESSIONS_PER_HOUR: "30",
+        DUBGUARD_CLIENT_UPLOADS_PER_HOUR: "90",
         DUBGUARD_SEMANTIC_PROVIDER: "disabled",
         DUBGUARD_SECONDARY_WHISPER_MODEL: "e2e-fixture-only",
       },

@@ -16,12 +16,13 @@ from test_phase2c import workflow, attest, run, sign
 
 def submit(client, token, **query):
     return client.post('/quick/analyze', params={'scenario_id': 'correct', **query},
-        headers={'Authorization': 'Bearer '+token}, files={'file': ('a.wav', wav_bytes(), 'audio/wav')})
+        headers={'Authorization': 'Bearer '+token, 'X-AMD-Demo-Code': 'phase6-separate-test-amd-code-long'}, files={'file': ('a.wav', wav_bytes(), 'audio/wav')})
 
 
 @pytest.fixture
 def amd(quick, monkeypatch):
     client, s, root = quick
+    monkeypatch.setenv('DUBGUARD_AMD_DEMO_ACCESS_CODE', 'phase6-separate-test-amd-code-long')
     monkeypatch.setenv('AMD_TOKEN_FACTORY_MODEL', 'DeepSeek-V4-Flash')
     monkeypatch.setenv('AMD_TOKEN_FACTORY_ENDPOINT', 'https://unit.test/v1')
     monkeypatch.setenv('AMD_TOKEN_FACTORY_API_KEY', 'phase4-private-test-secret')
@@ -136,8 +137,8 @@ def test_amd_quotas_survive_new_client_and_bound_global_jobs(amd):
 def test_quick_wrong_semantic_model_never_calls_audio_model(amd, monkeypatch):
     c, s, calls, _ = amd
     monkeypatch.setenv('AMD_TOKEN_FACTORY_MODEL', 'MiMo-V2.6-Flash')
-    assert submit(c, s['token'], mode='amd', consent=True).status_code == 200
-    assert not calls and report(c, s)['semantic_status'] == 'unavailable'
+    assert submit(c, s['token'], mode='amd', consent=True).status_code == 503
+    assert not calls and report(c, s)['amd_runs'] == 0
 
 
 def test_demo_runtime_slots_cannot_be_bypassed_by_deleted_sessions(quick):

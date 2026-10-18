@@ -24,7 +24,9 @@ services:
     pids_limit: 128
     restart: unless-stopped
     stop_grace_period: 100s
-    networks: [application]
+    networks:
+      application:
+        ipv4_address: ${DUBGUARD_API_IP:-172.30.71.3}
     logging: &logs
       driver: json-file
       options:
@@ -50,7 +52,9 @@ services:
     mem_limit: 256m
     pids_limit: 128
     restart: unless-stopped
-    networks: [application]
+    networks:
+      application:
+        ipv4_address: ${DUBGUARD_CADDY_IP:-172.30.71.2}
     logging: *logs
   cache-model:
     profiles: [setup]
@@ -75,3 +79,6 @@ volumes:
   caddy_config:
 networks:
   application:
+    ipam:
+      config:
+        - subnet: ${DUBGUARD_PROXY_SUBNET:-172.30.71.0/24}

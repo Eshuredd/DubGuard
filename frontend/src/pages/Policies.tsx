@@ -120,7 +120,10 @@ export function Policies() {
   }
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading compact">
+        <a href="/review" className="back">
+          ← Reviewer Workspace
+        </a>
         <span className="eyebrow">POLICY WORKBENCH</span>
         <h1>Define what must stay true.</h1>
         <p>
@@ -128,6 +131,12 @@ export function Policies() {
           as approved policy.
         </p>
       </header>
+      <ol className="workflow-path" aria-label="Policy preparation">
+        <li>Define approved instructions</li>
+        <li>Protect requirements</li>
+        <li>Save draft revision</li>
+        <li>Review & explicitly approve</li>
+      </ol>
       <div className="two-column policy-layout">
         <aside className="panel">
           <h2>Saved revisions</h2>

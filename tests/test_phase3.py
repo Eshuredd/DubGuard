@@ -52,6 +52,10 @@ def test_browser_format_limits(tmp_path):
 def quick(tmp_path,monkeypatch):
     monkeypatch.setenv('DUBGUARD_DATA_DIR',str(tmp_path))
     monkeypatch.setenv('DUBGUARD_DEMO_ACCESS_CODE','test-only-demo-access-code-long')
+    monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO','false')
+    # These tests isolate session/global quotas; Phase 6 exercises client defaults.
+    monkeypatch.setenv('DUBGUARD_CLIENT_SESSIONS_PER_HOUR','30')
+    monkeypatch.setenv('DUBGUARD_CLIENT_UPLOADS_PER_HOUR','90')
     class Stub:
         name,model_id='stub','not-real-asr'
         def transcribe(self,path):return [ASRHypothesis(text='Switch the power on.',start_seconds=0,end_seconds=.3)]

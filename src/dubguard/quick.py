@@ -21,7 +21,7 @@ from .engine import verify
 from .providers import AMDTokenFactoryProvider, DisabledProvider
 from .review import _root
 from .schemas import VerificationRequest, ScriptPolicy
-from .ui_contracts import DemoScenario, QuickReport
+from .ui_contracts import DemoScenario, QuickReport, QuickConfig
 
 router = APIRouter(prefix="/quick", tags=["demonstration"])
 TTL = 1800
@@ -45,6 +45,10 @@ def database():
     try:
         db.execute("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, digest TEXT, expires REAL, created REAL, state TEXT, runs INTEGER, payload TEXT)")
         db.execute("CREATE TABLE IF NOT EXISTS admissions (created REAL)")
+        db.execute("CREATE TABLE IF NOT EXISTS client_events (digest TEXT, kind TEXT, created REAL)")
+        db.execute("CREATE INDEX IF NOT EXISTS client_events_lookup ON client_events(digest,kind,created)")
+        db.execute("CREATE TABLE IF NOT EXISTS accounting_secret (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT)")
+        db.execute("INSERT OR IGNORE INTO accounting_secret VALUES (1,?)", (secrets.token_hex(32),))
         if "amd_runs" not in {r["name"] for r in db.execute("PRAGMA table_info(sessions)")}:
             db.execute("ALTER TABLE sessions ADD COLUMN amd_runs INTEGER NOT NULL DEFAULT 0")
         db.commit()
@@ -65,6 +69,7 @@ def cleanup():
             shutil.rmtree(_root() / "quick" / row["id"], ignore_errors=True)
         db.execute("DELETE FROM sessions WHERE expires<=?", (time.time(),))
         db.execute("DELETE FROM admissions WHERE created<?", (time.time()-3600,))
+        db.execute("DELETE FROM client_events WHERE created<?", (time.time()-3600,))
 
 
 def session(authorization: str | None = Header(default=None)) -> str:
@@ -82,12 +87,52 @@ def get_scenarios():
     return scenarios()
 
 
+def public_local_enabled() -> bool:
+    return os.getenv("DUBGUARD_PUBLIC_LOCAL_DEMO", "false").lower() == "true"
+
+
+def amd_demo_available() -> bool:
+    # Configuration inspection only. Never construct a transport or perform discovery.
+    from .providers import _load_project_env
+    from urllib.parse import urlsplit
+    _load_project_env()
+    code = os.getenv("DUBGUARD_AMD_DEMO_ACCESS_CODE", "")
+    try:
+        reviewers = json.loads(os.getenv("DUBGUARD_REVIEW_TOKENS_JSON", "{}"))
+        if not isinstance(reviewers, dict):
+            return False
+        endpoint = urlsplit(os.getenv("AMD_TOKEN_FACTORY_ENDPOINT", ""))
+        return bool(len(code) >= 24 and code != os.getenv("DUBGUARD_DEMO_ACCESS_CODE")
+                    and code != os.getenv("AMD_TOKEN_FACTORY_API_KEY")
+                    and code not in reviewers.values()
+                    and os.getenv("AMD_TOKEN_FACTORY_API_KEY")
+                    and os.getenv("AMD_TOKEN_FACTORY_MODEL") == "DeepSeek-V4-Flash"
+                    and endpoint.scheme == "https" and endpoint.hostname
+                    and not endpoint.username and not endpoint.password and not endpoint.query and not endpoint.fragment)
+    except (ValueError, TypeError):
+        return False
+
+
+def authorize_amd(code: str, consent: bool):
+    if not consent:
+        raise HTTPException(422, "Explicit consent is required for each AMD analysis; only script, policy and transcript text are sent")
+    if not amd_demo_available():
+        raise HTTPException(503, "AMD analysis unavailable; local verification remains available")
+    if not hmac.compare_digest(code.encode(), os.getenv("DUBGUARD_AMD_DEMO_ACCESS_CODE", "").encode()):
+        raise HTTPException(403, "Separate AMD demo authorization required")
+
+
+@router.get("/config", response_model=QuickConfig)
+def demo_config():
+    return {"public_local": public_local_enabled(), "amd_available": amd_demo_available()}
+
+
 @router.post("/sessions")
 def create_session(x_demo_code: str = Header(default="")):
     expected = os.getenv("DUBGUARD_DEMO_ACCESS_CODE", "")
-    if len(expected) < 24:
+    if not public_local_enabled() and len(expected) < 24:
         raise HTTPException(503, "Quick Test is disabled; operator must configure a demo access code")
-    if not hmac.compare_digest(expected, x_demo_code):
+    if not public_local_enabled() and not hmac.compare_digest(expected.encode(), x_demo_code.encode()):
         raise HTTPException(401, "Valid demo access code required")
     cleanup()
     token, identity = secrets.token_urlsafe(32), uuid4().hex
@@ -170,11 +215,12 @@ def _analyze_job(identity: str, data: bytes, content_type: str, scenario_id: str
 @router.post("/analyze")
 async def analyze(tasks: BackgroundTasks, scenario_id: str, file: UploadFile = File(...),
                   mode: Literal["local", "amd"] = "local", consent: bool = False,
+                  x_amd_demo_code: str = Header(default=""),
                   identity: str = Depends(session)):
     if scenario_id not in {item.id for item in scenarios()}:
         raise HTTPException(422, "Unknown demonstration scenario")
-    if mode == "amd" and not consent:
-        raise HTTPException(422, "Explicit consent is required to send script, policy and provisional transcript text to AMD. Original audio is never sent to DeepSeek.")
+    if mode == "amd":
+        authorize_amd(x_amd_demo_code, consent)
     data = await file.read(MAX_BYTES+1)
     await file.close()
     if not data or len(data)>MAX_BYTES:

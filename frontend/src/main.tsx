@@ -36,8 +36,8 @@ function Shell() {
           </span>
         </NavLink>
         <nav aria-label="Main navigation">
-          <NavLink to="/test">Quick Test</NavLink>
-          <NavLink to="/review">Full Review</NavLink>
+          <NavLink to="/test">Try DubGuard</NavLink>
+          <NavLink to="/review">Reviewer Workspace</NavLink>
           {token() ? (
             <button
               className="text-button"
@@ -49,7 +49,7 @@ function Shell() {
               Sign out
             </button>
           ) : (
-            <NavLink to="/login">Reviewer sign in</NavLink>
+            <span className="nav-note">Reviewer sign-in required</span>
           )}
         </nav>
       </header>

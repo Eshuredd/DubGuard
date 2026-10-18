@@ -1,9 +1,12 @@
 # Single-server demo deployment
 
-Status: public deployment pending; no public URL is verified. Phase 4 is committed
-and pushed as `c8b688d77a7c8f34f74f1d5ab89e9d8d8564753a`. Phase 5's local container
-execution and current release status are recorded in PHASE5_REPORT.md.
-No AMD inference, purchase, or deployment has been authorized by these instructions.
+Current installation: the user reports DigitalOcean Ubuntu 24.04, 4 vCPUs / 8 GB,
+at `https://134-209-145-248.sslip.io/test`. A Phase 6 GET-only browser audit received
+HTTP 200 and the existing “Hear what changed.” page. No running server was changed.
+For updates to that installation, follow [PHASE6_DEPLOYMENT.md](PHASE6_DEPLOYMENT.md)
+after explicit approval. The provisioning instructions below are historical/new-
+installation guidance; do not clone over, replace volumes, or reinitialize the
+existing server. Phase 6 remains local and uncommitted.
 
 ## Server and public URL requirements
 

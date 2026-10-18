@@ -84,11 +84,13 @@ export function AudioInput({
   onChange,
   maxSeconds = 60,
   maxBytes = 10_000_000,
+  scenarioName,
 }: {
   file: File | null;
   onChange: (f: File | null) => void;
   maxSeconds?: number;
   maxBytes?: number;
+  scenarioName?: string;
 }) {
   const [phase, setPhase] = useState<
       "idle" | "permission" | "ready" | "recording" | "stopping"
@@ -266,7 +268,17 @@ export function AudioInput({
           className={phase === "recording" ? "mic live" : "mic"}
           aria-hidden="true"
         >
-          ●
+          <svg
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <rect x="9" y="2" width="6" height="13" rx="3" />
+            <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" />
+          </svg>
         </span>
         <div>
           <h3>Your narration</h3>
@@ -348,12 +360,54 @@ export function AudioInput({
               }
             }}
           />
-          <button type="button" className="text-button" onClick={cancel}>
-            Discard recording
-          </button>
-          <small>Preview locally. Nothing is uploaded until you submit.</small>
+          <div className="actions">
+            <a
+              className="button secondary"
+              href={url || undefined}
+              download={recordingFilename(file, scenarioName)}
+            >
+              Download Original Recording
+            </a>
+            <button type="button" className="text-button" onClick={cancel}>
+              Discard recording
+            </button>
+          </div>
+          <small>
+            {file.type || "Original file format"} · Original bytes, no
+            conversion. Preview and save locally before analyzing. Quick Test
+            server audio expires after 30 minutes; a download is separate from
+            retention and transcript annotation.
+          </small>
         </div>
       )}
     </section>
   );
+}
+
+export function recordingFilename(file: File, scenarioName?: string) {
+  const mime = file.type.split(";")[0].toLowerCase();
+  const ext =
+    (
+      {
+        "audio/webm": "webm",
+        "audio/mp4": "mp4",
+        "video/mp4": "mp4",
+        "audio/wav": "wav",
+        "audio/x-wav": "wav",
+        "audio/mpeg": "mp3",
+        "audio/x-m4a": "m4a",
+      } as Record<string, string>
+    )[mime] ||
+    file.name.match(/\.(wav|mp3|webm|mp4|m4a)$/i)?.[1].toLowerCase() ||
+    "webm";
+  const stem =
+    (scenarioName
+      ? `dubguard-${scenarioName}-original`
+      : file.name.replace(/\.[^.]+$/, "")
+    )
+      .normalize("NFKD")
+      .replace(/[^a-zA-Z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 100) || "dubguard-recording";
+  return `${/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(stem) ? "dubguard-" : ""}${stem}.${ext}`;
 }

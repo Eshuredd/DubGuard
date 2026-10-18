@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../..");
 const config = readFileSync(
-  resolve(root, ".dubguard-data/phase5/server.env"),
+  resolve(root, process.env.DUBGUARD_CONTAINER_ENV || ".dubguard-data/phase5/server.env"),
   "utf8",
 );
 const value = (name: string) =>
@@ -56,7 +56,7 @@ test("production SPA, CSP, private upload and real CPU ASR remain provisional", 
     page.getByText(/Analyzed mode: Local Verification/),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Raw ASR · unverified" }),
+    page.getByRole("heading", { name: "Recognized narration · provisional" }),
   ).toBeVisible();
   await expect(
     page.getByText("review required", { exact: true }),
@@ -70,7 +70,7 @@ test("production SPA, CSP, private upload and real CPU ASR remain provisional", 
     page.getByLabel("I consent to sending script"),
   ).not.toBeChecked();
   await page.screenshot({
-    path: resolve(root, "reports/phase5/production-local.png"),
+    path: resolve(root, "reports/phase6/production-local.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Delete session and audio" }).click();

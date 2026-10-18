@@ -107,6 +107,13 @@ export function Findings({
         <Badge value={result.decision} />
       </div>
       <p className="notice">{result.safety_notice}</p>
+      <p className="finding-guidance">
+        {result.decision === "CRITICAL_DEVIATION"
+          ? "Critical deviation confirmed from human-verified evidence. A new recording is required."
+          : result.decision === "PASS_CANDIDATE"
+            ? "No confirmed policy violation from current evidence. Human review and sign-off prerequisites still apply."
+            : "Needs human confirmation. Listen to the cited source, confirm the actual words and resolve uncertain evidence before deciding."}
+      </p>
       {result.semantic && (
         <p className="notice">
           Semantic provider: {result.semantic.provider} ·{" "}
@@ -130,7 +137,7 @@ export function Findings({
           <div className="section-heading">
             <strong>
               {f.rule_id.startsWith("ASR.SUSPECTED")
-                ? "Suspected change in raw ASR"
+                ? "Potential instruction mismatch"
                 : f.rule_id.startsWith("SEMANTIC")
                   ? "Semantic advisory"
                   : f.rule_id.startsWith("ACOUSTIC")
@@ -180,6 +187,25 @@ export function Findings({
             </div>
           </div>
           <p>{f.explanation}</p>
+          {!!(f.approved.length + f.observed.length) && (
+            <details className="source-references">
+              <summary>Source references & exact text spans</summary>
+              {[...f.approved, ...f.observed].map((e, j) => (
+                <p key={j}>
+                  <strong>
+                    {e.source === "approved"
+                      ? "Approved script"
+                      : "Observed evidence"}
+                  </strong>{" "}
+                  · {e.instruction_id || "unmapped instruction"}{" "}
+                  {e.segment_id && `· Segment ${e.segment_id}`} · characters{" "}
+                  {e.start_char}–{e.end_char}
+                  <br />
+                  <q>{e.text}</q>
+                </p>
+              ))}
+            </details>
+          )}
           {f.provider && (
             <small>
               {f.provider} · Call {f.model_call_id || "not supplied"}

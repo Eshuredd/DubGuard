@@ -940,6 +940,22 @@
         "title": "PolicyRecord",
         "type": "object"
       },
+      "QuickConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "amd_available": {
+            "title": "Amd Available",
+            "type": "boolean"
+          },
+          "public_local": {
+            "title": "Public Local",
+            "type": "boolean"
+          }
+        },
+        "required": ["public_local", "amd_available"],
+        "title": "QuickConfig",
+        "type": "object"
+      },
       "QuickReport": {
         "additionalProperties": false,
         "properties": {
@@ -2259,6 +2275,16 @@
           },
           {
             "in": "header",
+            "name": "x-amd-demo-code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Amd-Demo-Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -2350,6 +2376,25 @@
           }
         },
         "summary": "Audio",
+        "tags": ["demonstration"]
+      }
+    },
+    "/quick/config": {
+      "get": {
+        "operationId": "demo_config_quick_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Demo Config",
         "tags": ["demonstration"]
       }
     },

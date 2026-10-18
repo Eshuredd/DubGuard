@@ -40,6 +40,8 @@ app = FastAPI(lifespan=lifespan, title="DubGuard — Industrial Narration Review
               description="English single-speaker text review. PASS_CANDIDATE is not safety certification or release approval.")
 app.include_router(review_router)
 app.include_router(quick_router)
+from .quick_admission import QuickAdmissionMiddleware
+app.add_middleware(QuickAdmissionMiddleware)
 
 
 @app.middleware("http")

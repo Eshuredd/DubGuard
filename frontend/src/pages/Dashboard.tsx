@@ -17,8 +17,15 @@ export function Login() {
   const navigate = useNavigate();
   return (
     <section className="panel narrow">
-      <span className="eyebrow">FULL REVIEW</span>
+      <span className="eyebrow">
+        REVIEWER WORKSPACE · AUTHENTICATION REQUIRED
+      </span>
       <h1>Reviewer access</h1>
+      <p>
+        Manage approved policies, original audio, human corrections, review
+        decisions and release sign-off. Quick Test evaluates a demonstration
+        recording; this workspace preserves professional review history.
+      </p>
       <p>
         Your token stays in this browser tab’s session storage. Sign out to
         remove it.
@@ -63,7 +70,14 @@ export function Dashboard() {
   const [rows, setRows] = useState<Summary[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
-    [page, setPage] = useState(0);
+    [page, setPage] = useState(0),
+    [view, setView] = useState("all");
+  const historical = (r: Summary) =>
+    ["APPROVED", "REJECTED", "SUPERSEDED"].includes(r.workflow.state);
+  const visible = rows.filter(
+    (r) =>
+      view === "all" || (view === "history" ? historical(r) : !historical(r)),
+  );
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -103,6 +117,40 @@ export function Dashboard() {
           {error} <Link to="/login">Sign in again</Link>
         </p>
       )}
+      <div className="workspace-overview">
+        <div>
+          <span className="eyebrow">ON THIS PAGE</span>
+          <strong>{rows.filter((r) => !historical(r)).length}</strong>
+          <span>Current reviews</span>
+        </div>
+        <div>
+          <span className="eyebrow">EVIDENCE TO CONFIRM</span>
+          <strong>
+            {
+              rows.filter(
+                (r) => !historical(r) && !r.workflow.evidence_record_id,
+              ).length
+            }
+          </strong>
+          <span>Awaiting human evidence</span>
+        </div>
+        <div>
+          <span className="eyebrow">HISTORY</span>
+          <strong>{rows.filter(historical).length}</strong>
+          <span>Completed or superseded</span>
+        </div>
+      </div>
+      <div className="list-heading">
+        <h2>Review queue</h2>
+        <label>
+          Show reviews on this page
+          <select value={view} onChange={(e) => setView(e.target.value)}>
+            <option value="all">All reviews</option>
+            <option value="current">Current work</option>
+            <option value="history">Historical reviews</option>
+          </select>
+        </label>
+      </div>
       {loading ? (
         <p role="status">Loading reviews…</p>
       ) : !rows.length ? (
@@ -112,7 +160,13 @@ export function Dashboard() {
         </div>
       ) : (
         <div className="review-list">
-          {rows.map((r) => (
+          {!visible.length && (
+            <p className="panel">
+              No {view === "history" ? "historical" : "current"} reviews on this
+              page.
+            </p>
+          )}
+          {visible.map((r) => (
             <Link
               className="review-row"
               key={r.workflow.id}
@@ -129,6 +183,19 @@ export function Dashboard() {
                   {r.audio.format.toUpperCase()} ·{" "}
                   {new Date(r.workflow.created_at).toLocaleString()}
                 </small>
+                <div className="row-stages" aria-label="Evidence progress">
+                  <span>✓ Script approved</span>
+                  <span>
+                    {r.workflow.transcription_record_id ? "✓" : "○"}{" "}
+                    Transcription
+                  </span>
+                  <span>
+                    {r.workflow.evidence_record_id ? "✓" : "○"} Human evidence
+                  </span>
+                  <span>
+                    {r.workflow.verification_record_id ? "✓" : "○"} Verification
+                  </span>
+                </div>
               </div>
               <Badge value={r.workflow.state} />
               <span aria-hidden="true">→</span>

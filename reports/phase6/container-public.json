@@ -1,0 +1,17 @@
+{
+  "fixture": "Synthetic two-second silence; real CPU ASR, no speech/ground-truth claims",
+  "public_local": true,
+  "amd_available": false,
+  "amd_calls": 0,
+  "anonymous_audio_rejected": true,
+  "caddy_forwarded_spoof_rejected": true,
+  "client_admission_limit": 4,
+  "oversized_body_rejected": true,
+  "amd_without_configuration_rejected_before_body": true,
+  "local_decision": "REVIEW_REQUIRED",
+  "original_audio_bytes_preserved": true,
+  "local_pipeline_seconds": 2.168,
+  "restart_preserved_audio_and_client_quota": true,
+  "deletion_preserved_client_quota": true,
+  "authenticated_deletion": true
+}

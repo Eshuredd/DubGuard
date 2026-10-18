@@ -1,3 +1,5 @@
+import { capture } from "./capture";
+import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 function wav() {
@@ -28,8 +30,10 @@ async function login(page: Page) {
 }
 async function newReview(page: Page) {
   await login(page);
+  await capture(page, "dashboard");
   await page.getByRole("link", { name: "Scripts & policies" }).click();
   await page.getByRole("button", { name: "Save policy draft" }).click();
+  await capture(page, "policy-editor");
   await expect(page.getByRole("status")).toContainText("Draft saved");
   await page.getByLabel("I reviewed the saved instructions").check();
   await page
@@ -81,10 +85,12 @@ test("real MediaRecorder on fake device → private Quick Test → refresh and d
   page,
 }) => {
   await page.goto("/test");
+  await capture(page, "landing");
   await page
     .getByLabel("Demo access code")
     .fill(process.env.DUBGUARD_E2E_DEMO_CODE!);
   await page.getByRole("button", { name: "Start Quick Test" }).click();
+  await capture(page, "scenarios");
   await expect(
     page.getByRole("button", { name: "Record narration" }),
   ).toBeVisible();
@@ -94,11 +100,27 @@ test("real MediaRecorder on fake device → private Quick Test → refresh and d
     .click();
   await expect(page.getByRole("status")).toContainText("Recording");
   await page.waitForTimeout(650);
+  await capture(page, "microphone");
   await page
     .getByRole("button", { name: "Stop recording", exact: true })
     .click();
   await expect(page.getByLabel("Recording preview")).toBeVisible();
   await expect(page.getByText("narration.webm")).toBeVisible();
+  await capture(page, "recording-preview");
+  const original = await page
+    .getByLabel("Recording preview")
+    .evaluate(async (el) =>
+      Array.from(
+        new Uint8Array(
+          await (await fetch((el as HTMLAudioElement).src)).arrayBuffer(),
+        ),
+      ),
+    );
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download Original Recording" }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("dubguard-correct-original.webm");
+  expect(readFileSync((await download.path())!)).toEqual(Buffer.from(original));
   await page.getByRole("button", { name: "Analyze recording" }).click();
   await expect(
     page.getByRole("heading", { name: "Verification findings" }),
@@ -111,6 +133,7 @@ test("real MediaRecorder on fake device → private Quick Test → refresh and d
     page.getByRole("heading", { name: "Verification findings" }),
   ).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
+  await capture(page, "local-evidence");
   await page.screenshot({
     path: "test-results/quick-test.png",
     fullPage: true,
@@ -125,10 +148,12 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
   page,
 }) => {
   await page.goto("/test");
+  await capture(page, "landing");
   await page
     .getByLabel("Demo access code")
     .fill(process.env.DUBGUARD_E2E_DEMO_CODE!);
   await page.getByRole("button", { name: "Start Quick Test" }).click();
+  await capture(page, "scenarios");
   await expect(page.getByLabel("Verification mode")).toHaveValue("local");
   await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
     name: "protocol.wav",
@@ -136,6 +161,9 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
     buffer: wav(),
   });
   await page.getByLabel("Verification mode").selectOption("amd");
+  await page
+    .getByLabel("AMD demo access code")
+    .fill(process.env.DUBGUARD_E2E_AMD_CODE!);
   await expect(
     page.getByRole("button", { name: "Analyze recording" }),
   ).toBeDisabled();
@@ -161,6 +189,7 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
     .analyze();
   expect(a11y.violations).toEqual([]);
+  await capture(page, "amd-mocked");
   await page.screenshot({
     path: "test-results/quick-amd-mocked.png",
     fullPage: true,
@@ -172,6 +201,9 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
   await expect(page.getByLabel("Verification mode")).toHaveValue("local");
   await page.getByRole("button", { name: "15 versus 50", exact: true }).click();
   await page.getByLabel("Verification mode").selectOption("amd");
+  await page
+    .getByLabel("AMD demo access code")
+    .fill(process.env.DUBGUARD_E2E_AMD_CODE!);
   await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
     name: "protocol.wav",
     mimeType: "audio/wav",
@@ -226,6 +258,7 @@ test("full review policy approval, upload, tentative mapping, correction, critic
     page.getByText("critical deviation", { exact: true }),
   ).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
+  await capture(page, "critical-signoff");
   await page.screenshot({
     path: "test-results/critical-review.png",
     fullPage: true,
@@ -271,6 +304,7 @@ test("full review policy approval, upload, tentative mapping, correction, critic
   await expect(page.getByRole("status")).toContainText(
     "Human approval recorded",
   );
+  await capture(page, "approved-signoff");
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Approve recording", exact: true }),
@@ -296,6 +330,7 @@ test("authentication failure and signout remove privileged access", async ({
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("401");
   await login(page);
+  await capture(page, "dashboard");
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.goto("/review");
   await expect(
@@ -307,6 +342,7 @@ test("microphone denied and unavailable states are explicit", async ({
   page,
 }) => {
   await login(page);
+  await capture(page, "dashboard");
   await page.goto("/review/new");
   await page.evaluate(() => {
     Object.defineProperty(navigator, "mediaDevices", {
@@ -378,6 +414,7 @@ test("accessibility audit on Quick Test and full evidence workspace", async ({
   page,
 }) => {
   await page.goto("/test");
+  await capture(page, "landing");
   expect(
     (
       await new AxeBuilder({ page })
@@ -420,4 +457,38 @@ test("unsaved spoken-text edits block approval and verification", async ({
   await expect(
     page.getByRole("button", { name: "Verify with local rules" }),
   ).toBeEnabled();
+});
+
+test("keyboard navigation reaches the demo and changes scenario without a pointer", async ({
+  page,
+}) => {
+  await page.goto("/test");
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("link", { name: "Skip to content" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.getByLabel("Demo access code").focus();
+  await page.keyboard.type(process.env.DUBGUARD_E2E_DEMO_CODE!);
+  await page.keyboard.press("Enter");
+  const scenario = page.getByRole("button", {
+    name: "15 versus 50",
+    exact: true,
+  });
+  await expect(scenario).toBeVisible();
+  await scenario.focus();
+  await page.keyboard.press("Space");
+  await expect(scenario).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("link", { name: "Record or upload", exact: true })
+    .focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#capture-panel")).toBeFocused();
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Delete session and audio" }).click();
 });

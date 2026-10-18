@@ -6,6 +6,10 @@ from .audio import AudioArtifact, TranscriptionResult
 from .alignment import AlignmentRun
 from .acoustic import TargetedRecheckResult
 
+class QuickConfig(Model):
+    public_local: bool
+    amd_available: bool
+
 class WorkflowState(Model):
     id: str
     policy_record_id: str

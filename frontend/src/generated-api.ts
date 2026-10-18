@@ -72,6 +72,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/quick/config": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Demo Config */
+    get: operations["demo_config_quick_config_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/quick/scenarios": {
     parameters: {
       query?: never;
@@ -910,6 +927,13 @@ export interface components {
       kind: string;
       payload: components["schemas"]["ScriptPolicy-Output"];
     };
+    /** QuickConfig */
+    QuickConfig: {
+      /** Amd Available */
+      amd_available: boolean;
+      /** Public Local */
+      public_local: boolean;
+    };
     /** QuickReport */
     QuickReport: {
       alignment?: components["schemas"]["AlignmentRun"] | null;
@@ -1394,6 +1418,7 @@ export interface operations {
         consent?: boolean;
       };
       header?: {
+        "x-amd-demo-code"?: string;
         authorization?: string | null;
       };
       path?: never;
@@ -1452,6 +1477,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  demo_config_quick_config_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuickConfig"];
         };
       };
     };

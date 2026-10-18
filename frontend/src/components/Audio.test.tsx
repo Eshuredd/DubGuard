@@ -8,11 +8,11 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { useState } from "react";
-import { AudioInput } from "./Audio";
+import { AudioInput, chooseMime, recordingFilename } from "./Audio";
 let stopTrack: ReturnType<typeof vi.fn>;
 let track: { stop: ReturnType<typeof vi.fn>; onended: null | (() => void) };
 class Recorder {
-  static isTypeSupported = vi.fn(() => true);
+  static isTypeSupported = vi.fn((_mime: string) => true);
   state = "inactive";
   mimeType = "audio/webm;codecs=opus";
   ondataavailable: ((e: { data: Blob }) => void) | null = null;
@@ -55,6 +55,71 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+it.each([
+  ["audio/webm;codecs=opus", "capture.wav", "webm"],
+  ["audio/mp4;codecs=mp4a.40.2", "capture.webm", "mp4"],
+  ["audio/wav", "source.wav", "wav"],
+  ["audio/mpeg", "source.mp3", "mp3"],
+  ["", "original.M4A", "m4a"],
+])("preserves %s container extension without conversion", (mime, name, ext) => {
+  expect(
+    recordingFilename(
+      new File(["original"], name, { type: mime }),
+      "15 versus 50",
+    ),
+  ).toBe(`dubguard-15-versus-50-original.${ext}`);
+});
+it("sanitizes unsafe and reserved filenames", () => {
+  expect(
+    recordingFilename(
+      new File(["x"], "../../bad:name.wav", { type: "audio/wav" }),
+    ),
+  ).toBe("bad-name.wav");
+  expect(
+    recordingFilename(new File(["x"], "CON.mp4", { type: "audio/mp4" })),
+  ).toBe("dubguard-CON.mp4");
+});
+it("downloads the same original uploaded File used by preview and revokes on discard", () => {
+  const original = new File([new Uint8Array([0, 255, 1, 2])], "original.wav", {
+    type: "audio/wav",
+  });
+  render(<Harness />);
+  fireEvent.change(screen.getByLabelText("Upload audio"), {
+    target: { files: [original] },
+  });
+  expect(URL.createObjectURL).toHaveBeenCalledWith(original);
+  expect(
+    screen.getByRole("link", { name: "Download Original Recording" }),
+  ).toHaveAttribute("href", "blob:test");
+  expect(
+    screen.getByRole("link", { name: "Download Original Recording" }),
+  ).toHaveAttribute("download", "original.wav");
+  fireEvent.click(screen.getByText("Discard recording"));
+  expect(
+    screen.queryByRole("link", { name: "Download Original Recording" }),
+  ).not.toBeInTheDocument();
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test");
+});
+it("negotiates MP4 when WebM is unsupported and keeps the recorder MIME", async () => {
+  Recorder.isTypeSupported.mockImplementation((mime: string) =>
+    mime.startsWith("audio/mp4"),
+  );
+  expect(chooseMime()).toBe("audio/mp4;codecs=mp4a.40.2");
+  class MP4 extends Recorder {
+    mimeType = "audio/mp4;codecs=mp4a.40.2";
+  }
+  vi.stubGlobal("MediaRecorder", MP4);
+  render(<Harness />);
+  fireEvent.click(screen.getByText("Record narration"));
+  fireEvent.click(await screen.findByText("Start recording"));
+  fireEvent.click(screen.getByText("Stop recording"));
+  expect(
+    screen.getByRole("link", { name: "Download Original Recording" }),
+  ).toHaveAttribute("download", "narration.mp4");
+  const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as File;
+  expect(blob.type).toBe("audio/mp4;codecs=mp4a.40.2");
+  expect(blob.size).toBe(new Blob(["stub browser chunks"]).size);
 });
 it("does not request microphone permission on load", () => {
   render(<Harness />);

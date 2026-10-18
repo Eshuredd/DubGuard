@@ -382,7 +382,57 @@ export function ReviewPage() {
           dependencies; create a superseding review to retry failed processing.
         </p>
       )}
-      <section className="panel sticky-audio">
+      <nav className="review-stages" aria-label="Review stages">
+        <a href="#approved-script">
+          <b>01</b> Approved script
+        </a>
+        <a href="#original-audio">
+          <b>02</b> Original recording
+        </a>
+        <a href="#transcription">
+          <b>03</b> Transcription & alignment
+        </a>
+        {data.transcription ? (
+          <a href="#human-evidence">
+            <b>04</b> Human confirmation
+          </a>
+        ) : (
+          <span>
+            <b>04</b> Human confirmation · waiting
+          </span>
+        )}
+        {run ? (
+          <a href="#verification">
+            <b>05</b> Verification findings
+          </a>
+        ) : (
+          <span>
+            <b>05</b> Verification · waiting
+          </span>
+        )}
+        {data.acoustic ? (
+          <a href="#acoustic">
+            <b>06</b> Acoustic resolution
+          </a>
+        ) : (
+          <span>
+            <b>06</b> Acoustic recheck · not run
+          </span>
+        )}
+        {run ? (
+          <a href="#signoff">
+            <b>07</b> Human sign-off
+          </a>
+        ) : (
+          <span>
+            <b>07</b> Human sign-off · waiting
+          </span>
+        )}
+        <a href="#audit">
+          <b>08</b> Audit & export
+        </a>
+      </nav>
+      <section className="panel sticky-audio" id="original-audio">
         <AudioPlayer
           path={"/review/artifacts/" + w.audio_record_id + "/audio"}
           audioRef={audio}
@@ -403,7 +453,7 @@ export function ReviewPage() {
       )}
       <div className="two-column">
         <section className="panel">
-          <h2>Approved script</h2>
+          <h2 id="approved-script">Approved script</h2>
           <small>Approved by {data.approved_policy.policy.approved_by}</small>
           {data.approved_policy.script.instructions.map((i) => (
             <article className="script-step" key={i.id}>
@@ -427,7 +477,7 @@ export function ReviewPage() {
           ))}
         </section>
         <section className="panel">
-          <h2>Raw ASR · unverified</h2>
+          <h2 id="transcription">Raw ASR · unverified</h2>
           {!data.transcription ? (
             <>
               <p>
@@ -570,6 +620,7 @@ export function ReviewPage() {
                 </button>
               </div>
             )}
+            <div id="human-evidence" />
             <TranscriptEditor
               key={`${w.revision}-${editorReset}`}
               data={data}
@@ -638,7 +689,7 @@ export function ReviewPage() {
           </section>
           {data.acoustic && (
             <section className="panel">
-              <h2>Independent acoustic evidence</h2>
+              <h2 id="acoustic">Independent acoustic evidence</h2>
               <p>
                 {data.acoustic.assessment.note} ·{" "}
                 {data.acoustic.secondary_provider} /{" "}
@@ -717,6 +768,7 @@ export function ReviewPage() {
           )}
           {run && (
             <section className="panel">
+              <div id="verification" />
               <Findings
                 result={run}
                 onSeek={(s) => jump(audio.current, s)}
@@ -744,7 +796,35 @@ export function ReviewPage() {
                 Run {w.verification_record_id} · Human evidence{" "}
                 {w.evidence_record_id || "not recorded"}
               </small>
-              <h2>Final human decision</h2>
+              <h2 id="signoff">Final human decision</h2>
+              <div
+                className={
+                  canApprove ? "approval-state ready" : "approval-state"
+                }
+              >
+                <strong>
+                  {finalized.has(w.state)
+                    ? "This review is finalized"
+                    : canApprove
+                      ? "Evidence prerequisites met — human decision required"
+                      : "Approval is blocked"}
+                </strong>
+                <p>
+                  {finalized.has(w.state)
+                    ? "This decision is retained against its exact evidence and verification run. Create a superseding review for a new recording or further changes."
+                    : dirty
+                      ? "Save your transcript corrections and run verification again."
+                      : !data.verified_evidence
+                        ? "Listen to the original recording and save complete human evidence."
+                        : run.decision === "CRITICAL_DEVIATION"
+                          ? "A critical deviation requires a new recording; ordinary approval is blocked."
+                          : run.decision !== "PASS_CANDIDATE"
+                            ? "Resolve uncertain or conflicting evidence and reverify this revision."
+                            : accepted !== run.findings.length
+                              ? "Explicitly review every satisfied check for this exact verification run."
+                              : "Record your decision reason and confirm the exact evidence and run below. The server rechecks every prerequisite."}
+                </p>
+              </div>
               <p>
                 PASS_CANDIDATE is not APPROVED. Critical or unresolved checks
                 block approval. Actual spoken errors require a new recording.
@@ -807,7 +887,7 @@ export function ReviewPage() {
         </>
       )}
       <section className="panel">
-        <h2>Audit & evidence history</h2>
+        <h2 id="audit">Audit & evidence history</h2>
         <p>History is preserved in SQLite; it is not tamper-proof.</p>
         {data.approvals.map((a, i) => (
           <p key={i}>

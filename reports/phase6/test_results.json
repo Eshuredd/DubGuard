@@ -1,0 +1,19 @@
+{
+  "backend": { "command": ".venv/Scripts/python -m pytest -q --junitxml=reports/phase6/backend.xml", "passed": 333, "failed": 0, "warnings": "One upstream Starlette TestClient deprecation warning" },
+  "vitest": { "passed": 21, "failed": 0 },
+  "typescript": "passed",
+  "production_build": "passed locally and in Docker Node 22.22.2",
+  "chrome_private_and_reviewer": { "passed": 9, "failed": 0, "retries": 0 },
+  "chrome_public_mode_separate_run": { "passed": 1, "failed": 0, "retries": 0 },
+  "chrome_production_container": { "passed": 1, "failed": 0, "retries": 0, "asr": "real CPU Whisper on generated silence" },
+  "accessibility": { "axe_tags": ["wcag2a", "wcag2aa", "wcag21aa"], "violations": 0, "coverage": "Desktop/mobile screenshot states; public evidence also at 768px; keyboard skip link, scenario selection and workflow navigation" },
+  "overflow_checks": { "widths": [320, 390, 768, 1440], "failures": 0 },
+  "dependencies": { "host_pip_check": "passed", "container_pip_check": "passed", "npm_audit_vulnerabilities": 0 },
+  "caddy_config": "valid",
+  "compose_config": "valid",
+  "git_diff_check": "passed",
+  "amd": "All protocol responses mocked; zero live AMD calls",
+  "production": "GET-only visual baseline; zero mutations",
+  "physical_microphone": "not verified",
+  "ground_truth": "No human speech annotations or evaluation metrics generated"
+}

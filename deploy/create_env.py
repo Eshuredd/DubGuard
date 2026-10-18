@@ -10,10 +10,16 @@ parser.add_argument('path', type=Path)
 args = parser.parse_args()
 reviewer = secrets.token_urlsafe(32)
 demo = secrets.token_urlsafe(32)
+amd_demo = secrets.token_urlsafe(32)
 config = '\n'.join([
     '# Private server configuration. Do not copy into frontend or commit.',
     'DUBGUARD_REVIEW_TOKENS_JSON=' + json.dumps({'reviewer': reviewer}, separators=(',', ':')),
     'DUBGUARD_DEMO_ACCESS_CODE=' + demo,
+    'DUBGUARD_PUBLIC_LOCAL_DEMO=false',
+    'DUBGUARD_AMD_DEMO_ACCESS_CODE=' + amd_demo,
+    'DUBGUARD_CLIENT_SESSIONS_PER_HOUR=4',
+    'DUBGUARD_CLIENT_UPLOADS_PER_HOUR=6',
+    'DUBGUARD_TRUSTED_PROXIES=',
     'DUBGUARD_SEMANTIC_PROVIDER=amd',
     'AMD_TOKEN_FACTORY_ENDPOINT=https://developer.amd.com.cn/radeon/api/v1',
     'AMD_TOKEN_FACTORY_MODEL=DeepSeek-V4-Flash',

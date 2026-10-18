@@ -1,0 +1,11 @@
+{
+  "url": "https://134-209-145-248.sslip.io/test",
+  "observed_at": "2026-10-17T18:17:02.118Z",
+  "http_status": 200,
+  "heading": [
+    "Hear what changed."
+  ],
+  "page_errors": [],
+  "mutations_allowed": false,
+  "credentials_submitted": false
+}

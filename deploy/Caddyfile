@@ -1,3 +1,10 @@
+{
+    servers {
+        timeouts {
+            read_body 30s
+        }
+    }
+}
 {$DUBGUARD_DOMAIN} {
     encode zstd gzip
     header {
@@ -11,8 +18,18 @@
     request_body {
         max_size 26MB
     }
+    @quick_upload path /api/quick/analyze
+    request_body @quick_upload {
+        max_size 10065536
+    }
+    @quick_session path /api/quick/sessions
+    request_body @quick_session {
+        max_size 4096
+    }
     handle_path /api/* {
         reverse_proxy api:8000 {
+            header_up X-Forwarded-For {http.request.remote.host}
+            header_up -Forwarded
             transport http {
                 response_header_timeout 180s
             }

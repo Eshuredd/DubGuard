@@ -91,7 +91,11 @@ Node.js 22.22.2+ (22.x), 24.15+ (24.x), or 26+ and the audio dependencies above 
 environment variables as described under “Audio and human-review workflow”:
 `DUBGUARD_REVIEW_TOKENS_JSON`, `DUBGUARD_DATA_DIR`, and a cached
 `DUBGUARD_WHISPER_MODEL`. Quick Test additionally needs a separate random
-`DUBGUARD_DEMO_ACCESS_CODE` of at least 24 characters. Never reuse a reviewer token.
+`DUBGUARD_DEMO_ACCESS_CODE` of at least 24 characters in the default private mode.
+Optional `DUBGUARD_PUBLIC_LOCAL_DEMO=true` allows bounded anonymous **local-only**
+sessions. Paid demo analysis additionally requires the independent
+`DUBGUARD_AMD_DEMO_ACCESS_CODE`, a valid session and fresh consent on each request.
+Never reuse a reviewer token. See [Phase 6 configuration and update instructions](PHASE6_DEPLOYMENT.md).
 
 Start the API using the uvicorn command above, then in another terminal:
 
@@ -100,10 +104,12 @@ npm --prefix frontend ci
 npm --prefix frontend run dev
 ```
 
-Open http://127.0.0.1:5173/test for Quick Test or /login for Full Review.
+Open http://127.0.0.1:5173/test to try DubGuard or /login for the Reviewer Workspace.
 The Vite server proxies /api to port 8000. Refresh/deep links are supported.
 Microphone permission is requested only after clicking Record narration; capture
 and submission are separate explicit actions. HTTPS or localhost is required.
+Completed recordings and uploaded originals can be downloaded before submission,
+with their original bytes/MIME/container. Quick Test server audio still expires.
 
 ```bash
 npm --prefix frontend test

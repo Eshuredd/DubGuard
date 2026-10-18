@@ -18,6 +18,7 @@ export type Review = Schema["ReviewResult"];
 export type Workflow = Schema["WorkflowView"];
 export type Scenario = Schema["DemoScenario"];
 export type Quick = Schema["QuickReport"];
+export type QuickConfig = Schema["QuickConfig"];
 export type Summary = Schema["WorkflowSummary"];
 export type PolicyRecord = Schema["PolicyRecord"];
 export const token = () => sessionStorage.getItem("dubguard-reviewer") || "";
@@ -64,12 +65,17 @@ export const post = <T>(path: string, body?: unknown, credential?: string) =>
     },
     credential,
   );
-export const upload = (path: string, file: File, credential?: string) => {
+export const upload = (
+  path: string,
+  file: File,
+  credential?: string,
+  headers?: HeadersInit,
+) => {
   const data = new FormData();
   data.append("file", file);
   return request<{ record_id: string }>(
     path,
-    { method: "POST", body: data },
+    { method: "POST", body: data, headers },
     credential,
   );
 };

@@ -16,4 +16,4 @@ ENV DUBGUARD_DATA_DIR=/home/dubguard/data DUBGUARD_WHISPER_MODEL=/models/tiny.en
 USER dubguard
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
-CMD ["python", "-m", "uvicorn", "dubguard.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--limit-concurrency", "16", "--backlog", "32", "--timeout-graceful-shutdown", "90", "--no-access-log"]
+CMD ["python", "-m", "uvicorn", "dubguard.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--limit-concurrency", "16", "--backlog", "32", "--timeout-graceful-shutdown", "90", "--no-access-log", "--no-proxy-headers"]
