@@ -4,7 +4,6 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 process.env.DUBGUARD_E2E_REVIEW_TOKEN ||= randomBytes(32).toString("hex");
-process.env.DUBGUARD_E2E_AMD_CODE ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_DIR ||= mkdtempSync(join(tmpdir(), "dubguard-e2e-"));
 const apiPort = process.env.DUBGUARD_E2E_API_PORT || "8000";
 const webPort = process.env.DUBGUARD_E2E_WEB_PORT || "5173";
@@ -47,7 +46,10 @@ export default defineConfig({
         }),
         DUBGUARD_CLIENT_EDITS_PER_HOUR: "120",
         DUBGUARD_OPERATOR_LOGINS_PER_HOUR: "30",
-        DUBGUARD_AMD_DEMO_ACCESS_CODE: process.env.DUBGUARD_E2E_AMD_CODE,
+        DUBGUARD_PUBLIC_AMD_ENABLED: "true",
+        DUBGUARD_AMD_CLIENT_REQUESTS_PER_DAY: "20",
+        DUBGUARD_AMD_REQUESTS_PER_HOUR: "100",
+        DUBGUARD_AMD_REQUESTS_PER_DAY: "1000",
         DUBGUARD_CLIENT_SESSIONS_PER_HOUR: "30",
         DUBGUARD_CLIENT_UPLOADS_PER_HOUR: "90",
         DUBGUARD_SEMANTIC_PROVIDER: "disabled",

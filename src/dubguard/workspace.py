@@ -9,7 +9,7 @@ import json
 import time
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile, Request
 from pydantic import Field, model_validator
 
 from . import quick
@@ -124,7 +124,9 @@ def active_analysis(document, row):
 
 @router.get("/config")
 def config():
-    return {"enabled": True, "amd_available": False, "notice": NOTICE}
+    config = quick.demo_config()
+    return {"enabled": True, "amd_available": config["amd_available"],
+            "amd_unavailable_reason": config["amd_unavailable_reason"], "notice": NOTICE}
 
 
 @router.post("/sessions")
@@ -164,8 +166,10 @@ def save_reference(payload: ReferenceInput, identity: str = Depends(session)):
 
 
 @router.post("/analyze")
-async def analyze(tasks: BackgroundTasks, expected_revision: int, file: UploadFile = File(...),
-                  mode: Literal["local"] = "local", identity: str = Depends(session)):
+async def analyze(tasks: BackgroundTasks, request: Request, expected_revision: int, file: UploadFile = File(...),
+                  mode: Literal["local", "amd"] = "local", consent: bool = False, identity: str = Depends(session)):
+    if mode == "amd":
+        quick.authorize_amd(consent)
     current = view(identity).workspace
     if not current.reference:
         raise HTTPException(409, "Save your reference script first")
@@ -174,7 +178,8 @@ async def analyze(tasks: BackgroundTasks, expected_revision: int, file: UploadFi
     if not data or len(data) > quick.MAX_BYTES:
         raise HTTPException(413, "Audio must be nonempty and at most 10 MB")
     return quick.enqueue_analysis(tasks, identity, data, file.content_type or "", reference=current.reference,
-                                  reference_revision=current.reference_version, expected_revision=expected_revision)
+                                  reference_revision=current.reference_version, expected_revision=expected_revision,
+                                  mode=mode, clients=getattr(request.state, "amd_clients", ()), consent=consent)
 
 
 @router.put("/evidence")

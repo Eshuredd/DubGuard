@@ -127,7 +127,8 @@ Inspect [the saved live response](../reports/phase4/amd_smoke.json) and
 [offline inspection](../reports/phase4/amd_smoke_inspection.json) as historical
 manual-text evidence, never as the newly recorded narration. Selecting AMD mode
 shows the requested model and text-transfer disclosure, with consent unchecked.
-Another request requires separate explicit authorization, the independent AMD
-code and fresh consent. Show actual status, latency, citations or honest failure
+During development, another live request requires separate explicit authorization
+and fresh consent. Public sample/custom requests need no access code and are
+bounded by server budgets. Show actual status, latency, citations or honest failure
 and retained local findings. Mock screenshots must stay labeled mocked. No
 ROCm/Quark/MiMo execution has been measured. See [evaluation scope](EVALUATION.md).

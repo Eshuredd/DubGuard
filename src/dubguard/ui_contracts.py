@@ -9,6 +9,7 @@ from .acoustic import TargetedRecheckResult
 class QuickConfig(Model):
     public_local: bool
     amd_available: bool
+    amd_unavailable_reason: Literal["configuration", "quota"] | None = None
 
 class WorkflowState(Model):
     id: str

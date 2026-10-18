@@ -1,0 +1,105 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const root=path.resolve('.');
+const runtime='C:/Users/eshum/.cache/codex-runtimes/codex-primary-runtime/dependencies';
+process.env.RUNTIME_NODE_MODULES=runtime+'/node/node_modules';
+const skill='C:/Users/eshum/.codex/plugins/cache/openai-primary-runtime/presentations/26.1017.11052/skills/presentations';
+const build=path.join(root,'demo/private/pitch-build');
+const output=path.join(root,'demo/output');
+await fs.mkdir(build,{recursive:true});
+await fs.mkdir(output,{recursive:true});
+try {await fs.symlink(runtime+'/node/node_modules',path.join(build,'node_modules'),'junction');} catch(e) {if(e.code!=='EEXIST')throw e;}
+// Resolve the bundled authoring library without installing dependencies.
+const {createRequire}=await import('node:module');
+const require=createRequire(path.join(build,'package.json'));
+const {Presentation,PresentationFile}=await import(pathToFileURL(require.resolve('@oai/artifact-tool')).href);
+const p=Presentation.create({slideSize:{width:1280,height:720}});
+const navy='#07131E',white='#F4F3EB',teal='#55DDC5',muted='#A9BBC4',amber='#FFC76D';
+const font='Aptos';
+function text(s,t,x,y,w,h,size=28,color=white,bold=false){
+ const a=s.shapes.add({geometry:'textbox',position:{left:x,top:y,width:w,height:h},fill:'none',line:{fill:'none',width:0}});
+ a.text=t;a.text.style={fontFamily:font,fontSize:size,color,bold};return a;
+}
+function slide(title,n){const s=p.slides.add();s.background.fill=navy;text(s,title,68,54,1144,100,46,white,true);text(s,`DUBGUARD   ${String(n).padStart(2,'0')}`,68,674,1144,22,15,muted);return s;}
+async function image(s,file,x,y,w,h){const bytes=await fs.readFile(file);s.images.add({blob:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),contentType:'image/png',alt:'Actual DubGuard browser capture',fit:'contain',position:{left:x,top:y,width:w,height:h}});}
+function notes(s,t,src=''){s.speakerNotes.text=t+'\n\nEvidence: '+src;}
+let s=p.slides.add();s.background.fill=navy;
+text(s,'AMD DEVELOPER HACKATHON ACT III',72,65,1120,34,20,muted);
+text(s,'DubGuard',68,205,1150,125,106,white,true);
+text(s,'Catch the one word\nthat changes everything.',73,350,1110,130,44,teal,true);
+text(s,'Evidence-backed industrial narration review',75,532,1100,50,27,white);
+text(s,'Intelligent Industry',75,630,1100,30,20,muted);
+notes(s,'DubGuard helps training-content teams inspect narration against protected instructions. The demonstration uses actual local speech recognition and preserves human review.','docs/SUBMISSION.md; demo/README.txt');
+s=slide('One word can reverse an instruction',2);
+text(s,'REFERENCE',72,190,530,35,19,muted);
+text(s,'Switch the\npower OFF',68,246,550,180,63,teal,true);
+text(s,'RECORDED TAKE',700,190,510,35,19,muted);
+text(s,'Switch the\npower ON',696,246,510,180,63,amber,true);
+text(s,'Industrial training reviewers need to inspect small wording changes before content release.',72,506,1115,100,31);
+notes(s,'This illustrates the protected off/on distinction. Recognition alone cannot establish the words actually spoken. The real result appears later.','recorded-evaluation/on-off.wav; demo/private/recording-results.json');
+s=slide('A review workspace for training teams',3);
+text(s,'01  Define the reference',70,198,480,48,29,teal,true);
+text(s,'Protect power state, values and operation order.',70,254,450,90,25);
+text(s,'02  Upload or record',70,373,480,48,29,teal,true);
+text(s,'Keep the original audio available for inspection.',70,429,450,90,25);
+await image(s,path.join(root,'demo/private/preview-create.png'),558,184,660,380);
+text(s,'Visitors can bring their own scripts and temporary demo policies.',70,580,1130,60,25,muted);
+notes(s,'The public Create a Review workflow supports custom references and protected requirements. A visitor-defined demo policy has no organizational approval authority.','frontend/src; demo/private/capture/browser-original.webm; demo/private/preview-create.png');
+s=slide('The real recording triggers further review',4);
+text(s,'Recognized narration',70,190,440,42,23,muted);
+text(s,'“Switch the power on.”',70,240,440,100,37,white,true);
+text(s,'REVIEW REQUIRED',70,367,450,45,32,amber,true);
+text(s,'Suspected polarity reversal\nApproximate source span: 0.00–2.00 s',70,432,450,130,25);
+await image(s,path.join(root,'demo/private/preview-finding.png'),542,184,676,380);
+text(s,'Provisional ASR evidence. Human listening remains pending.',70,589,1140,55,24,muted);
+notes(s,'Actual on-off.wav analysis returns REVIEW_REQUIRED and ASR.SUSPECTED.POLARITY.REVERSED, unresolved. Other completeness/alignment findings remain present. Six original recordings were processed locally; no accuracy rate is claimed.','demo/private/capture/actual-result.json; demo/private/recording-results.json; demo/private/preview-finding.png');
+s=slide('Local audio processing with optional AMD review',5);
+text(s,'LOCAL AUDIO PIPELINE',70,190,540,35,20,teal,true);
+text(s,'Original audio\nCPU Whisper\nProvisional transcript\nProtected-rule checks',70,255,535,264,35);
+text(s,'OPTIONAL TEXT REVIEW',700,190,510,35,20,teal,true);
+text(s,'AMD Token Factory\nDeepSeek-V4-Flash\nCitation validation\nHuman evidence review',700,255,510,264,35);
+text(s,'The semantic request contains script, policy and transcript text.\nOriginal audio stays in the local processing pipeline.',70,562,1120,82,25,muted);
+notes(s,'The local pipeline performs CPU Whisper transcription and deterministic verification. The optional AMD adapter sends text for advisory semantic analysis and validates citations. This is the implemented architecture, not a performance benchmark.','docs/ARCHITECTURE.md; src/dubguard; demo/README.txt');
+s=slide('AMD advice includes inspectable source citations',6);
+text(s,'HISTORICAL LIVE AMD TEXT INFERENCE',70,177,1130,36,20,amber,true);
+text(s,'“Switch the power off.”',70,254,1110,58,42,white,true);
+text(s,'“Switch the power on.”',70,327,1110,58,42,teal,true);
+text(s,'2 validated source spans',70,439,600,48,32,teal,true);
+text(s,'0 citation issues',700,439,500,48,32,teal,true);
+text(s,'16.393 s response time',70,510,600,40,27);
+text(s,'805 tokens',700,510,500,40,27);
+text(s,'Previously authorized text example, separate from the uploaded WAV demo.',70,592,1130,58,24,muted);
+notes(s,'Historical returned model: self-dploy/DeepSeek-V4-Flash. Latency 16.3927187 s. Usage 662 prompt + 143 completion = 805 tokens. Validated exact reference span [0,21), observed span [0,20), requirement power-state, instruction power, observed segment s1. Zero citation issues. No new AMD call was made during production.','reports/phase4/amd_smoke.json; reports/phase4/amd_smoke_inspection.json');
+s=slide('People control the evidence and decision',7);
+text(s,'Replay the original',70,198,455,50,31,teal,true);
+text(s,'Inspect source spans and correct spoken evidence after listening.',70,260,445,110,26);
+text(s,'Keep unresolved findings visible',70,408,450,90,31,white,true);
+text(s,'The actual export retains NEEDS_REVIEW and the review note.',70,507,450,95,25,muted);
+await image(s,path.join(root,'demo/private/preview-export.png'),542,180,676,390);
+notes(s,'No listening attestation, correction, release approval or authenticated sign-off was manufactured. Actual export decision NEEDS_REVIEW with note: Unresolved ASR candidate. Human listening and confirmation required before release. Public demo decisions remain separate from authenticated organizational sign-off.','demo/private/capture/evidence-export.json; demo/private/preview-export.png');
+s=slide('A focused pilot for narration quality assurance',8);
+text(s,'INITIAL USERS',70,189,1140,32,20,teal,true);
+text(s,'Industrial training and localization review teams',70,241,1120,90,39,white,true);
+text(s,'Proposed pilot',70,380,500,45,29,teal,true);
+text(s,'Review a small batch of narration\nagainst a team-approved reference.',70,439,510,120,28);
+text(s,'Measures to validate',700,380,510,45,29,teal,true);
+text(s,'Reviewer time per recording\nMissed critical wording changes\nUnnecessary review flags',700,439,510,145,27);
+notes(s,'These are proposed users and validation measures, not measured traction or commercial results. The current evidence is a working prototype, six local recording analyses and one historical live AMD text example. No industrial safety certification or accuracy benchmark is claimed.','docs/EVALUATION.md; demo/private/recording-results.json; demo/README.txt');
+s=slide('DubGuard',9);
+text(s,'Catch the one word\nthat changes everything.',70,209,1130,155,60,teal,true);
+text(s,'Local transcription. Protected instructions.\nSource evidence. Human decisions.',73,407,1110,98,32);
+text(s,'github.com/Eshuredd/DubGuard',73,567,1120,45,28,white,true);
+text(s,'Current custom-review workflow demonstrated locally',73,628,1120,30,20,muted);
+notes(s,'Invite a pilot using real training narration and reviewer-adjudicated ground truth. The public HTTPS deployment was checked but serves an older UI. Use the final Remotion video for the current local workflow.','demo/README.txt; demo/output/DubGuard_Hackathon_Demo_Final.mp4');
+for(let i=0;i<p.slides.items.length;i++){
+ const png=await p.export({slide:p.slides.items[i],format:'png',scale:1});
+ await fs.writeFile(path.join(build,`slide-${i+1}.png`),new Uint8Array(await png.arrayBuffer()));
+}
+const cover=await p.export({slide:p.slides.items[0],format:'png',scale:1.5});
+await fs.writeFile(path.join(output,'DubGuard_Cover.png'),new Uint8Array(await cover.arrayBuffer()));
+const candidate=path.join(build,'candidate.pptx');
+await (await PresentationFile.exportPptx(p)).save(candidate);
+const {finalizePresentation}=await import(pathToFileURL(path.join(skill,'container_tools/artifact_tool_utils.mjs')).href);
+const result=await finalizePresentation({workspaceDir:root,candidatePath:candidate,finalPath:path.join(output,'DubGuard_Pitch_Deck.pptx'),pythonExecutable:runtime+'/python/python.exe',integrityValidatorPath:path.join(skill,'container_tools/inspect_presentation_package_integrity.py'),layoutValidatorPath:path.join(skill,'container_tools/inspect_presentation_layout_geometry.py'),layoutArgs:['--expected-slide-size-emu','12192000,6858000','--validate-bullet-geometry','--validate-heading-fit'],explicitTotalSlideCount:9,requiredNativeTableOwnerSlides:[],requiredNativeChartOwnerSlides:[],fontPolicy:{basis:'design',families:[font]},verifyArtifactToolImport:true,receiptPath:path.join(build,'validation.json')});
+console.log(JSON.stringify(result));

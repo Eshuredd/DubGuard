@@ -1,0 +1,11 @@
+Application footage and branding: the user's DubGuard project.
+Evaluation speech: original user-provided human WAVs, used only for the requested demo.
+Explanatory narration: locally generated generic af_heart voice using Kokoro-82M v1.0.
+Kokoro model: Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+ONNX distribution and synthesis runtime: https://github.com/thewh1teagle/kokoro-onnx
+Runtime license: MIT. Model files: model-files-v1.0 release, int8 ONNX + voices-v1.0.bin.
+This is ordinary generic TTS, not voice cloning or an imitation of the user.
+Typography: installed Windows Segoe UI / Consolas, rasterized into the video; fonts are not redistributed.
+Motion graphics: original React/CSS/SVG authored for this video.
+Music and stock media: none.
+Remotion: installed actual Remotion framework; applicable project license at https://www.remotion.dev/license.

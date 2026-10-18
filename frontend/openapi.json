@@ -1042,6 +1042,18 @@
             "title": "Amd Available",
             "type": "boolean"
           },
+          "amd_unavailable_reason": {
+            "anyOf": [
+              {
+                "enum": ["configuration", "quota"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amd Unavailable Reason"
+          },
           "public_local": {
             "title": "Public Local",
             "type": "boolean"
@@ -2631,16 +2643,6 @@
               "default": false,
               "title": "Consent",
               "type": "boolean"
-            }
-          },
-          {
-            "in": "header",
-            "name": "x-amd-demo-code",
-            "required": false,
-            "schema": {
-              "default": "",
-              "title": "X-Amd-Demo-Code",
-              "type": "string"
             }
           },
           {
@@ -4351,10 +4353,20 @@
             "name": "mode",
             "required": false,
             "schema": {
-              "const": "local",
               "default": "local",
+              "enum": ["local", "amd"],
               "title": "Mode",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "consent",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Consent",
+              "type": "boolean"
             }
           },
           {

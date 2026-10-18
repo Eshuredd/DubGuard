@@ -1,7 +1,6 @@
 """Bounded, capability-authenticated demonstration sessions; never review approvals."""
 from contextlib import contextmanager
 from hashlib import sha256
-import hmac
 import json
 import os
 from pathlib import Path
@@ -13,7 +12,7 @@ from threading import BoundedSemaphore
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile, Request
 from fastapi.responses import Response
 from .audio import AudioStore, AudioArtifact, AUDIO_MIME, transcribe_artifact
 from .alignment import propose_alignment
@@ -22,6 +21,7 @@ from .providers import AMDTokenFactoryProvider, DisabledProvider
 from .review import _root
 from .schemas import VerificationRequest, ScriptPolicy
 from .ui_contracts import DemoScenario, QuickReport, QuickConfig
+from .public_amd import enabled, check_budget
 
 router = APIRouter(prefix="/quick", tags=["demonstration"])
 TTL = 1800
@@ -45,6 +45,8 @@ def database():
     try:
         db.execute("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, digest TEXT, expires REAL, created REAL, state TEXT, runs INTEGER, payload TEXT)")
         db.execute("CREATE TABLE IF NOT EXISTS admissions (created REAL)")
+        db.execute("CREATE TABLE IF NOT EXISTS amd_attempts (created REAL, browser TEXT, network TEXT)")
+        db.execute("CREATE INDEX IF NOT EXISTS amd_attempts_time ON amd_attempts(created)")
         db.execute("CREATE TABLE IF NOT EXISTS client_events (digest TEXT, kind TEXT, created REAL)")
         db.execute("CREATE INDEX IF NOT EXISTS client_events_lookup ON client_events(digest,kind,created)")
         db.execute("CREATE TABLE IF NOT EXISTS accounting_secret (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT)")
@@ -75,6 +77,7 @@ def cleanup():
         db.execute("DELETE FROM sessions WHERE expires<=?", (time.time(),))
         db.execute("DELETE FROM admissions WHERE created<?", (time.time()-3600,))
         db.execute("DELETE FROM client_events WHERE created<?", (time.time()-3600,))
+        db.execute("DELETE FROM amd_attempts WHERE created<=?", (time.time()-86400,))
 
 
 def resolve_session(authorization: str | None, scope: str = "sample") -> str:
@@ -101,15 +104,9 @@ def amd_demo_available() -> bool:
     from .providers import _load_project_env
     from urllib.parse import urlsplit
     _load_project_env()
-    code = os.getenv("DUBGUARD_AMD_DEMO_ACCESS_CODE", "")
     try:
-        reviewers = json.loads(os.getenv("DUBGUARD_REVIEW_TOKENS_JSON", "{}"))
-        if not isinstance(reviewers, dict):
-            return False
         endpoint = urlsplit(os.getenv("AMD_TOKEN_FACTORY_ENDPOINT", ""))
-        return bool(len(code) >= 24
-                    and code != os.getenv("AMD_TOKEN_FACTORY_API_KEY")
-                    and code not in reviewers.values()
+        return bool(enabled()
                     and os.getenv("AMD_TOKEN_FACTORY_API_KEY")
                     and os.getenv("AMD_TOKEN_FACTORY_MODEL") == "DeepSeek-V4-Flash"
                     and endpoint.scheme == "https" and endpoint.hostname
@@ -118,18 +115,25 @@ def amd_demo_available() -> bool:
         return False
 
 
-def authorize_amd(code: str, consent: bool):
+def authorize_amd(consent: bool):
     if not consent:
         raise HTTPException(422, "Explicit consent is required for each AMD analysis; only script, policy and transcript text are sent")
     if not amd_demo_available():
-        raise HTTPException(503, "AMD analysis unavailable; local verification remains available")
-    if not hmac.compare_digest(code.encode(), os.getenv("DUBGUARD_AMD_DEMO_ACCESS_CODE", "").encode()):
-        raise HTTPException(403, "Separate AMD demo authorization required")
+        raise HTTPException(503, "AMD Semantic Review is temporarily unavailable. Local Verification remains available.")
 
 
 @router.get("/config", response_model=QuickConfig)
 def demo_config():
-    return {"public_local": True, "amd_available": amd_demo_available()}
+    available = amd_demo_available()
+    reason = None if available else "configuration"
+    if available:
+        try:
+            with database() as db:
+                check_budget(db)
+        except HTTPException:
+            available = False
+            reason = "quota"
+    return {"public_local": True, "amd_available": available, "amd_unavailable_reason": reason}
 
 
 @router.post("/sessions")
@@ -185,6 +189,7 @@ def _analyze_job(identity: str, data: bytes, content_type: str, scenario_id: str
         request = VerificationRequest(**policy.model_dump(mode="json"), transcript=result.transcript)
         payload["verification"] = verify(request).model_dump(mode="json")
         if mode == "amd":
+            authorize_amd(consented_at is not None)
             payload["semantic_status"] = "processing"
             # Publish local evidence before the bounded remote call. Re-check consent/session lifetime.
             with database() as db:
@@ -193,7 +198,7 @@ def _analyze_job(identity: str, data: bytes, content_type: str, scenario_id: str
                     shutil.rmtree(root, ignore_errors=True)
                     return
                 db.execute("UPDATE sessions SET payload=? WHERE id=?", (json.dumps(payload), identity))
-            provider = AMDTokenFactoryProvider(max_retries=0, timeout_seconds=40, max_output_tokens=1024)
+            provider = AMDTokenFactoryProvider(max_retries=0, timeout_seconds=40, max_output_tokens=1024, max_input_tokens=32768)
             # Quick Test never substitutes another model or the optional audio provider.
             if provider.model != "DeepSeek-V4-Flash":
                 provider.model = None  # visible unavailable result, zero HTTP attempts
@@ -210,7 +215,11 @@ def _analyze_job(identity: str, data: bytes, content_type: str, scenario_id: str
     except Exception:
         if mode == "amd":
             payload["semantic_status"] = "not_completed"
-        payload["error"] = "Analysis failed: unsupported audio, exceeded duration, or unavailable local ASR. No result is fabricated. Check local dependencies and cached model."
+        if payload.get("verification"):
+            state = "COMPLETE"
+            payload["error"] = "AMD Semantic Review did not complete. Local Verification results remain available. No remote result is fabricated."
+        else:
+            payload["error"] = "Analysis failed: unsupported audio, exceeded duration, or unavailable local ASR. No result is fabricated. Check local dependencies and cached model."
     with database() as db:
         row = db.execute("SELECT expires FROM sessions WHERE id=?", (identity,)).fetchone()
         if row and row["expires"] > time.time():
@@ -220,22 +229,24 @@ def _analyze_job(identity: str, data: bytes, content_type: str, scenario_id: str
 
 
 @router.post("/analyze")
-async def analyze(tasks: BackgroundTasks, scenario_id: str, file: UploadFile = File(...),
+async def analyze(tasks: BackgroundTasks, request: Request, scenario_id: str, file: UploadFile = File(...),
                   mode: Literal["local", "amd"] = "local", consent: bool = False,
-                  x_amd_demo_code: str = Header(default=""),
                   identity: str = Depends(session)):
     if scenario_id not in {item.id for item in scenarios()}:
         raise HTTPException(422, "Unknown demonstration scenario")
     if mode == "amd":
-        authorize_amd(x_amd_demo_code, consent)
+        authorize_amd(consent)
     data = await file.read(MAX_BYTES+1)
     await file.close()
     if not data or len(data)>MAX_BYTES:
         raise HTTPException(413, "Demo audio must be nonempty and at most 10 MB")
-    return enqueue_analysis(tasks, identity, data, file.content_type or "", scenario_id, mode)
+    return enqueue_analysis(tasks, identity, data, file.content_type or "", scenario_id, mode,
+                            clients=getattr(request.state, "amd_clients", ()), consent=consent)
 
 
-def enqueue_analysis(tasks, identity, data, content_type, scenario_id=None, mode="local", reference=None, reference_revision=None, expected_revision=None):
+def enqueue_analysis(tasks, identity, data, content_type, scenario_id=None, mode="local", reference=None, reference_revision=None, expected_revision=None, clients=(), consent=False):
+    if mode == "amd":
+        authorize_amd(consent)
     if not _DEMO_SLOTS.acquire(blocking=False):
         raise HTTPException(429, "Two demo jobs are already running; wait for completion")
     try:
@@ -245,7 +256,9 @@ def enqueue_analysis(tasks, identity, data, content_type, scenario_id=None, mode
                 raise HTTPException(401, "Session expired")
             if reference is not None:
                 document = json.loads(row["custom"])
-                if document["revision"] != expected_revision:
+                if (document["revision"] != expected_revision
+                        or document["reference_version"] != reference_revision
+                        or document["reference"] != reference.model_dump(mode="json")):
                     raise HTTPException(409, "Reference changed; reload before analyzing")
                 document.update(evidence=None, reviewed=[], demo_decision=None)
                 document["revision"] += 1
@@ -254,6 +267,8 @@ def enqueue_analysis(tasks, identity, data, content_type, scenario_id=None, mode
                 raise HTTPException(429, "At most three attempts per session and two concurrent demo jobs; wait or start a new session")
             if mode == "amd" and (row["amd_runs"] >= 2 or db.execute("SELECT count(*) FROM sessions WHERE state='PROCESSING' AND json_extract(payload,'$.mode')='amd'").fetchone()[0] >= 1):
                 raise HTTPException(429, "At most two AMD runs per session and one concurrent AMD demo job; failed attempts also count")
+            if mode == "amd":
+                check_budget(db, clients, reserve=True)
             consented_at = time.time() if mode == "amd" else None
             shutil.rmtree(_root() / "quick" / identity, ignore_errors=True)
             db.execute("UPDATE sessions SET state='PROCESSING',runs=runs+1,amd_runs=amd_runs+?,payload=? WHERE id=?", (int(mode == "amd"), json.dumps({"scenario_id": scenario_id, "mode": mode, "consented_at": consented_at, "semantic_status": "pending_transcription" if mode == "amd" else "not_requested"}), identity))

@@ -1,3 +1,4 @@
+import { PublicAMD, WorkspaceAMDResults } from "../components/PublicAMD";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -42,6 +43,23 @@ export function PublicWorkspace() {
   const [title, setTitle] = useState("My narration review");
   const [steps, setSteps] = useState<Step[]>(initial);
   const [requirements, setRequirements] = useState<Requirement[]>(numeric);
+  const [mode, setMode] = useState<"local" | "amd">("local");
+  const [consent, setConsent] = useState(false);
+  const [amdAvailable, setAmdAvailable] = useState(false);
+  const [amdReason, setAmdReason] = useState<"configuration" | "quota" | null>(
+    null,
+  );
+  useEffect(() => {
+    request<{
+      amd_available: boolean;
+      amd_unavailable_reason?: "configuration" | "quota" | null;
+    }>("/workspace/config")
+      .then((c) => {
+        setAmdAvailable(c.amd_available);
+        setAmdReason(c.amd_unavailable_reason ?? null);
+      })
+      .catch(() => setAmdAvailable(false));
+  }, []);
   const [dirty, setDirty] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false),
@@ -136,6 +154,7 @@ export function PublicWorkspace() {
       sessionStorage.removeItem("dubguard-custom");
       setCap("");
       setData(null);
+      setConsent(false);
       hydrated.current = false;
       setDirty(true);
     }
@@ -154,6 +173,7 @@ export function PublicWorkspace() {
     }
   }
   function edited() {
+    setConsent(false);
     setDirty(true);
     setNotice("");
   }
@@ -242,15 +262,21 @@ export function PublicWorkspace() {
   }
   async function analyze() {
     if (!file || !data) return;
-    await act(async () => {
-      await upload(
-        `/workspace/analyze?expected_revision=${data.workspace.revision}`,
-        file,
-        cap,
-      );
-      setFile(null);
-      submitted.current = true;
-    }, "Local analysis started. Results update automatically; no AMD request is made.");
+    setConsent(false);
+    await act(
+      async () => {
+        await upload(
+          `/workspace/analyze?expected_revision=${data.workspace.revision}&mode=${mode}&consent=${mode === "amd" && consent}`,
+          file,
+          cap,
+        );
+        setFile(null);
+        submitted.current = true;
+      },
+      mode === "amd"
+        ? "Analysis started: local transcription, then consented AMD text review. Results update automatically."
+        : "Local analysis started. Results update automatically; no AMD request is made.",
+    );
   }
   async function correct() {
     if (!data) return;
@@ -347,6 +373,8 @@ export function PublicWorkspace() {
                 setCap("");
                 setData(null);
                 setFile(null);
+                setConsent(false);
+                setMode("local");
                 hydrated.current = true;
                 setDirty(true);
               }, "Temporary session and server recordings deleted.")
@@ -645,7 +673,7 @@ export function PublicWorkspace() {
             <h2>Record your narration</h2>
           </div>
           <span className="local-label">
-            Local verification only · no AMD call
+            Local rules and optional AMD text review
           </span>
         </div>
         <p>
@@ -653,7 +681,22 @@ export function PublicWorkspace() {
           this temporary workspace expires after 30 minutes.
         </p>
         <fieldset disabled={processing}>
-          <AudioInput file={file} onChange={setFile} scenarioName={title} />
+          <AudioInput
+            file={file}
+            onChange={(f) => {
+              setFile(f);
+              setConsent(false);
+            }}
+            scenarioName={title}
+          />
+          <PublicAMD
+            mode={mode}
+            consent={consent}
+            available={amdAvailable}
+            unavailableReason={amdReason}
+            onMode={setMode}
+            onConsent={setConsent}
+          />
           <button
             id="custom-analyze"
             disabled={
@@ -661,11 +704,19 @@ export function PublicWorkspace() {
               dirty ||
               !file ||
               processing ||
-              (data?.analysis.runs || 0) >= 3
+              (data?.analysis.runs || 0) >= 3 ||
+              (mode === "amd" &&
+                (!amdAvailable ||
+                  !consent ||
+                  (data?.analysis.amd_runs || 0) >= 2))
             }
             onClick={analyze}
           >
-            {processing ? "Analyzing locally…" : "Analyze recording locally"}
+            {processing
+              ? "Analyzing recording…"
+              : mode === "amd"
+                ? "Analyze recording with AMD"
+                : "Analyze recording locally"}
           </button>
           {dirty && (
             <p className="help">Save the current reference before analyzing.</p>
@@ -674,7 +725,9 @@ export function PublicWorkspace() {
         {data?.analysis.state === "PROCESSING" && (
           <p role="status" className="notice">
             Decoding original audio and transcribing locally. You can refresh
-            safely.
+            safely.{" "}
+            {data.analysis.mode === "amd" &&
+              `AMD status: ${data.analysis.semantic_status}. Requested model: DeepSeek-V4-Flash.`}
           </p>
         )}
         {data?.analysis.error && (
@@ -744,6 +797,10 @@ export function PublicWorkspace() {
               onSeek={(s) => jump(audio.current, s)}
             />
           )}
+          <WorkspaceAMDResults
+            report={data.analysis}
+            onSeek={(s) => jump(audio.current, s)}
+          />
           <details className="visitor-corrections" open>
             <summary>Correct spoken evidence after listening</summary>
             <p>

@@ -14,10 +14,12 @@ from urllib.parse import parse_qs
 
 from fastapi import HTTPException
 from starlette.concurrency import run_in_threadpool
-from starlette.datastructures import Headers
+from starlette.datastructures import Headers, MutableHeaders
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .quick import MAX_BYTES, authorize_amd, database, resolve_session
+from .public_amd import COOKIE, client_identity, check_budget
 
 _UPLOAD_SLOTS = BoundedSemaphore(2)
 _ACTIVE_CLIENTS: set[str] = set()
@@ -75,18 +77,18 @@ def charge(address, kind):
 
 def preflight(headers, query, address, scope="sample"):
     identity = resolve_session(headers.get("authorization"), scope)
-    # Authenticated upload attempts consume client budget even when AMD code,
+    # Authenticated upload attempts consume client budget even when configuration,
     # consent or subsequent quotas reject them. No credential guessing loop.
     digest = charge(address, "upload")
     mode = query.get("mode", ["local"])
     if len(mode) != 1 or mode[0] not in {"local", "amd"}:
         raise HTTPException(422, "Choose a supported verification mode")
     if mode[0] == "amd":
-        if scope == "custom":
-            raise HTTPException(403, "Custom workspace supports local verification only; AMD remains separately protected in Quick Test")
         consent = query.get("consent", [])
-        authorize_amd(headers.get("x-amd-demo-code", ""), len(consent) == 1 and consent[0].lower() in {"true", "1", "yes", "on"})
+        authorize_amd(len(consent) == 1 and consent[0].lower() in {"true", "1", "yes", "on"})
     with database() as db:
+        if mode[0] == "amd":
+            check_budget(db)
         row = db.execute("SELECT * FROM sessions WHERE id=?", (identity,)).fetchone()
         if not row or row["expires"] <= time.time():
             raise HTTPException(401, "Quick Test session is missing or expired")
@@ -110,6 +112,17 @@ class QuickAdmissionMiddleware:
         digest = None
         try:
             address = client_address(scope, headers)
+            if scope["path"].startswith(("/quick/", "/workspace/")):
+                cookie = Request(scope).cookies.get(COOKIE, "")
+                clients, signed_cookie = await run_in_threadpool(client_identity, cookie, address)
+                scope.setdefault("state", {})["amd_clients"] = clients
+                original_send = send
+                async def client_send(message):
+                    if message["type"] == "http.response.start" and cookie != signed_cookie:
+                        secure = "; Secure" if scope.get("scheme") == "https" or headers.get("x-forwarded-proto") == "https" else ""
+                        MutableHeaders(scope=message).append("set-cookie", f"{COOKIE}={signed_cookie}; Path=/; Max-Age=86400; HttpOnly; SameSite=Strict{secure}")
+                    await original_send(message)
+                send = client_send
             upload = scope["path"].endswith("/analyze")
             custom = scope["path"].startswith("/workspace/")
             metadata = scope["method"] == "PUT"

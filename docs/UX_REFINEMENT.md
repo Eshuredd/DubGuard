@@ -88,7 +88,7 @@ Baseline: `3abb735db75261a4165d269a0d217054da7b4788`. Inspection and reference r
 
 ## Audit and decisions recorded before implementation
 
-Preserve scenario cards, original-byte audio preview/download, private session controls, separate AMD authorization/consent, exact source citations, human evidence revisions and server-checked sign-off. The existing light palette and component structure are appropriate.
+Preserve scenario cards, original-byte audio preview/download, private session controls, fresh AMD consent and server quotas, exact source citations, human evidence revisions and server-checked sign-off. The existing light palette and component structure are appropriate.
 
 Desktop/mobile browser captures show results below the entire setup form; approved and recognized narration are separated by coverage, timeline and metadata; empty finding comparisons consume space. Mobile scenario copy is very small. Queue rows show stage markers but no explicit next action. A later CSS rule cancels sticky playback. Processing and quota errors need a clearer recovery path.
 

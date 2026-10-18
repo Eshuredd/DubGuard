@@ -45,10 +45,14 @@ and reviewer-configuration rotation revoke it; cookie mutations check origin.
 The frontend stores only a non-secret signed-in hint, never the reviewer key.
 Old tab-stored reviewer keys are removed on navigation. Sign-off rules are unchanged.
 
-Custom workspaces deliberately support **local verification only**. Attempts to
-select AMD directly are rejected before multipart parsing. Quick Test retains its
-separate AMD code, fresh consent, two-run quota, single AMD slot, zero retries,
-model provenance and exact citation checks. Audio is never sent to DeepSeek.
+Custom and sample workspaces support Local Verification and optional AMD Semantic
+Review without an access code or operator credentials. Each AMD analysis requires
+fresh consent. Only reference, protected requirements and provisional transcript
+text are sent; original audio is never sent to DeepSeek. Both workflows share
+persistent hourly/daily/client quotas, two AMD attempts per session, one AMD slot,
+zero retries, model provenance and exact source citation validation. Custom AMD
+findings retain the analyzed reference version and raw transcript; later visitor
+corrections rerun local rules and never rewrite the original AMD evidence.
 
 ## Configuration and safe DigitalOcean update
 
@@ -62,8 +66,9 @@ This update does not edit existing credentials or `.env`.
 `DUBGUARD_CLIENT_EDITS_PER_HOUR=60` (ceiling 120) and
 `DUBGUARD_OPERATOR_LOGINS_PER_HOUR=8` (ceiling 30) remain operational controls.
 Creation/upload budgets remain 4/6 hourly per client, shared across both flows.
-The AMD code is independent of reviewer credentials and the provider key; absent
-or invalid AMD configuration leaves local verification available.
+AMD uses the private backend provider key and `DUBGUARD_PUBLIC_AMD_ENABLED=true`;
+the switch defaults to false. Missing configuration leaves local verification
+available. See [public AMD budgets](DEPLOYMENT.md#public-amd-inference).
 
 Use [the full application upgrade runbook](DEPLOYMENT.md#full-application-upgrade)
 and [the exact update commands](DEPLOYMENT.md#public-workspace-update-commands)
@@ -76,11 +81,16 @@ Keep old image tags for rollback, preserving every post-backup review write.
 
 ## Verification and remaining limits
 
-Current access-removal results and desktop/mobile browser captures are under
+Public AMD enablement checks use mocked HTTP and synthetic recordings. New quota,
+consent, citation and isolation regressions are in `tests/test_public_amd.py`;
+browser captures and backend JUnit output are in `reports/local/public-amd/`.
+These checks make no live inference call and do not establish deployed readiness.
+
+Historical local-only access-removal results and desktop/mobile browser captures are under
 `reports/local/public-access/` (ignored local artifacts). Development browser
 tests use explicitly labeled synthetic audio/stub ASR/mock AMD fixtures. The
 separate production-container test runs real CPU Whisper on generated silence.
-Executed checks: **363 backend tests, 28 Vitest tests, 15 development Chrome E2E
+That earlier release executed **363 backend tests, 28 Vitest tests, 15 development Chrome E2E
 tests and 2 production-container Chrome tests passed**. TypeScript typecheck,
 host/container production builds, pip dependency checks, npm audit (zero known
 vulnerabilities), generated API contracts and `git diff --check` passed. Captured
@@ -106,6 +116,6 @@ at both sizes, with original audio and evidence downstream. Backend JUnit is
 Physical microphones and Safari/iOS remain unverified. Anonymous attestations are
 untrusted demonstration evidence. The workspace is a temporary, single-instance,
 English/single-speaker demo, not persistent organizational collaboration. Custom
-AMD review is unavailable; the protected sample AMD flow remains available where
-configured. Shared NAT clients share limits. Both public local workflows are always
+AMD review is available in both flows when configured and within budget. Shared
+NAT clients share a network limit. Both public local workflows are always
 available within those limits. DigitalOcean remains unchanged until approval.

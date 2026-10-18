@@ -49,7 +49,10 @@ full evidence/transport boundaries. Never use a Vite variable for server keys.
 
 | Variable | Safe default / purpose |
 |---|---|
-| `DUBGUARD_AMD_DEMO_ACCESS_CODE` | Empty disables AMD demo access. New independent random secret, at least 24 characters, distinct from every reviewer token and provider key. |
+| `DUBGUARD_PUBLIC_AMD_ENABLED` | `false`; set `true` only after quota tests pass and the release is approved. Emergency stop: set `false` and recreate the API with the preserved Compose invocation. |
+| `DUBGUARD_AMD_REQUESTS_PER_HOUR` | `10`, rolling hour, shared by all public flows; ceiling 100; zero stops admission. |
+| `DUBGUARD_AMD_REQUESTS_PER_DAY` | `40`, rolling 24 hours, persisted in SQLite across restart; ceiling 1000; zero stops admission. |
+| `DUBGUARD_AMD_CLIENT_REQUESTS_PER_DAY` | `4`, rolling 24 hours for both signed browser and HMAC network buckets; ceiling 20; zero stops admission. |
 | `DUBGUARD_CLIENT_SESSIONS_PER_HOUR` | `4` session-creation attempts per client; bounded to 1–30. Failed attempts count. |
 | `DUBGUARD_CLIENT_UPLOADS_PER_HOUR` | `6` admitted upload attempts per client; bounded to 1–90. Failed decodes and abandoned uploads count. |
 | `DUBGUARD_TRUSTED_PROXIES` | Empty: ignore forwarded IPs. Set only Caddy's verified static IP `/32` (default Compose address `172.30.71.2/32`). Never trust all addresses. |
@@ -61,34 +64,75 @@ Compose interpolation values belong in the operator's existing Compose environme
 or explicitly selected CLI `--env-file`; API settings belong in `server.env`.
 Do not dump `docker compose config` or environment values; use `config --quiet`.
 
-To add the separate AMD code without printing it, run this **on the server only
-after approval**, as an operator with permission to edit the existing secret file:
+### Public AMD inference
+
+Sample and custom AMD review require fresh consent, with no public access code,
+login or reviewer authorization. The old AMD demo code is ignored; remove its
+obsolete entry using the existing private editor. Preserve reviewer credentials,
+provider keys, the accounting secret and all data volumes.
+
+Before release, run `pytest tests/test_public_amd.py tests/test_phase4.py
+tests/test_phase6.py tests/test_workspace.py` and the complete regression suite.
+Tests use mocked HTTP only. Leave `DUBGUARD_PUBLIC_AMD_ENABLED=false` until these
+checks pass. No paid call is authorized by this runbook.
+
+Use `sudoedit /etc/dubguard/server.env` on the approved server to configure the
+four controls in the table and the existing private `AMD_TOKEN_FACTORY_API_KEY`,
+HTTPS `AMD_TOKEN_FACTORY_ENDPOINT`, and exact `AMD_TOKEN_FACTORY_MODEL=DeepSeek-V4-Flash`.
+No secret belongs in frontend variables, command flags, logs or screenshots.
+Use the full application upgrade below, including the stopped-API volume backup,
+with the existing project name, volumes and pinned approved release SHA. This is
+a backend release with an additive `amd_attempts` table, not a frontend-only update.
+
+After approval and successful quota validation, set the switch to `true` and
+run `dc up -d --no-deps --force-recreate api` using the existing preserved `dc`
+invocation. Check `/api/quick/config` and `/api/workspace/config`: `amd_available`
+must be true when configuration and global budgets permit. These endpoints inspect
+configuration/accounting only and never call AMD. This proves local readiness,
+not provider reachability; a live inference check requires separate authorization.
+
+Emergency stop: set `DUBGUARD_PUBLIC_AMD_ENABLED=false` in the private server env
+and recreate the API with the same command. Do not change the reviewer credential
+or delete accounting. A request already sent may finish and be billed. There is
+no browser switch capable of overriding the server control.
+
+Admission takes a SQLite `BEGIN IMMEDIATE` write transaction before scheduling
+work. Global and client budgets and the session's two-AMD-attempt limit reserve
+together. Reservations include failed decoding, ASR errors, provider failures and
+timeouts; no refund occurs after session deletion or process restart. Old AMD
+events expire after 24 hours. Browser IDs are signed, random, HttpOnly,
+SameSite=Strict cookies expiring after 24 hours; network identifiers are HMACs,
+never stored raw. Both limits must pass, so clearing cookies or recreating sessions
+does not reset the network budget. Shared NAT users share the network bucket.
+This bounds abuse rather than identifying people; distributed clients remain
+bounded by the global budget. Keep exactly one API process/replica.
+
+The public transport forces zero retries, a 40-second HTTP read/write timeout,
+1,024 maximum output tokens and a conservative 32,768 input-token ceiling
+(UTF-8 content bytes plus framing allowance). Oversized text is rejected without
+truncating source evidence. Only script, policy and transcript text leave the
+server; local deterministic results survive remote failures. HTTP 429 includes
+`Retry-After`; Local Verification remains available within its own limits.
+
+Monitor counts without reading client identifiers or secret configuration:
 
 ```bash
-sudo python3 - <<'PY'
-from pathlib import Path
-import os, secrets
-p = Path('/etc/dubguard/server.env')
-lines = p.read_text().splitlines()
-key = 'DUBGUARD_AMD_DEMO_ACCESS_CODE='
-existing = [s[len(key):] for s in lines if s.startswith(key)]
-if any(existing):
-    raise SystemExit('AMD demo code already configured; left unchanged')
-lines = [s for s in lines if not s.startswith(key)]
-lines.append(key + secrets.token_urlsafe(32))
-tmp = p.with_name(p.name + '.update.tmp')
-with tmp.open('x', opener=lambda path, flags: os.open(path, flags, 0o600)) as out:
-    out.write('\n'.join(lines) + '\n')
-tmp.replace(p)
+dc exec -T api python - <<'PY'
+from dubguard.quick import database
+import time
+with database() as db:
+    now = time.time()
+    for name, seconds in [('hour', 3600), ('day', 86400)]:
+        count = db.execute('SELECT count(*) FROM amd_attempts WHERE created>?', (now-seconds,)).fetchone()[0]
+        print(name, count)
 PY
-sudoedit /etc/dubguard/server.env
 ```
 
-Use the private editor to retrieve/share that demo code privately. Do not paste it
-into URLs, public screenshots, command flags or logs. A valid code alone never
-initiates inference: the session capability and fresh request consent are also
-required. Missing/invalid provider configuration returns unavailable before upload
-parsing; local analysis stays available. No live AMD call is part of this runbook.
+Counts are admitted attempts, not billed usage. Inspect model-reported usage and
+errors in consented session reports, and reconcile billing privately with the AMD
+account. Never export provider keys or raw transport error bodies. Back up the
+whole existing volume with API stopped; rollback preserves the additive table
+and post-backup writes. Do not restore an older quota database to reset allowance.
 
 ## Upgrade the existing DigitalOcean installation
 
@@ -338,8 +382,8 @@ procedure below before stopping it. Do not substitute an empty volume.
    Confirm one API process and persistent old review IDs.
 8. Make a short **real local recording** in the browser, preview/download it and
    compare original bytes/format. Submit local verification only. Confirm expiry,
-   quotas, protected audio retrieval, refresh and deletion. Test that AMD is
-   restricted without its separate code; do not authorize/send a real AMD request.
+   quotas, protected audio retrieval, refresh and deletion. Inspect AMD configuration readiness without submitting inference; do not send a
+   real AMD request without separate authorization.
 9. Set the verified Caddy IP `/32` trust entry before the update; without it all
    visitors conservatively share Caddy's client bucket. Verify separate-client
    accounting and spoofed forwarded-header rejection through HTTPS. Caddy
@@ -389,8 +433,7 @@ sudo python3 deploy/create_env.py /etc/dubguard/server.env
 sudoedit /etc/dubguard/server.env
 ```
 
-The generator refuses to overwrite existing files and creates distinct reviewer
-and AMD-demo secrets. Retrieve/distribute only the relevant credential
+The generator refuses to overwrite existing files and creates reviewer credentials. Retrieve/distribute the reviewer credential
 privately. Add an AMD key only if paid inference is intended; never show secrets
 in command flags, URLs, screenshots or logs. Both public local workflows are
 available immediately. Configure the verified Caddy `/32` before opening access.
@@ -498,7 +541,7 @@ $env:DUBGUARD_WHISPER_MODEL = (Resolve-Path .dubguard-data/models/tiny.en).Path
 ```
 
 Local public reviews need no access configuration. Set private reviewer credentials
-only for organizational workflows; AMD authorization remains separate and optional.
+only for organizational workflows; AMD analysis requires fresh consent and the public inference switch/budgets.
 PyAV 18.1.0 is deliberately pinned for faster-whisper 1.2.1 compatibility.
 
 ## Limits, restarts and operations

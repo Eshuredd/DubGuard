@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { capture } from "./capture";
 
-test("public local mode: no code, original upload download, local evidence and restricted AMD", async ({
+test("public local mode: no code, original upload download, local evidence and optional AMD", async ({
   page,
 }) => {
   await page.goto("/test");
@@ -68,7 +68,7 @@ test("public local mode: no code, original upload download, local evidence and r
         { headers, data: "must not be parsed" },
       )
     ).status(),
-  ).toBe(403);
+  ).toBe(422);
   await page
     .getByRole("button", { name: "On versus off", exact: true })
     .click();
@@ -78,7 +78,7 @@ test("public local mode: no code, original upload download, local evidence and r
     }),
   ).toBeVisible();
   await page.getByLabel("Verification mode").selectOption("amd");
-  await expect(page.getByLabel("AMD demo access code")).toBeVisible();
+  await expect(page.getByLabel("AMD demo access code")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Analyze recording" }),
   ).toBeDisabled();

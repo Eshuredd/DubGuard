@@ -197,9 +197,7 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
     buffer: wav(),
   });
   await page.getByLabel("Verification mode").selectOption("amd");
-  await page
-    .getByLabel("AMD demo access code")
-    .fill(process.env.DUBGUARD_E2E_AMD_CODE!);
+  await expect(page.getByLabel("AMD demo access code")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Analyze recording" }),
   ).toBeDisabled();
@@ -244,9 +242,7 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
   await expect(page.getByLabel("Verification mode")).toHaveValue("local");
   await page.getByRole("button", { name: "15 versus 50", exact: true }).click();
   await page.getByLabel("Verification mode").selectOption("amd");
-  await page
-    .getByLabel("AMD demo access code")
-    .fill(process.env.DUBGUARD_E2E_AMD_CODE!);
+  await expect(page.getByLabel("AMD demo access code")).toHaveCount(0);
   await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
     name: "protocol.wav",
     mimeType: "audio/wav",
@@ -311,9 +307,13 @@ test("full review policy approval, upload, tentative mapping, correction, critic
   await expect(
     page.getByRole("heading", { name: "Independent acoustic evidence" }),
   ).toBeVisible();
+  // Recheck invalidates the saved verification. Depending on polling timing,
+  // approval is either still disabled or already removed until re-verification.
   await expect(
-    page.getByRole("button", { name: "Approve recording", exact: true }),
-  ).toBeDisabled();
+    page
+      .getByRole("button", { name: "Approve recording", exact: true })
+      .and(page.locator(":enabled")),
+  ).toHaveCount(0);
   await page
     .getByLabel("Review note / action reason")
     .fill("Resolved stub acoustic conflict against verified test transcript.");

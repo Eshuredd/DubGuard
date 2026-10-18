@@ -1,4 +1,13 @@
 .venv/
+/recorded-evaluation/
+/demo/private/
+/demo/output/
+/demo/remotion/public/
+/demo/remotion/.cache/
+/demo/remotion/src/waveform.json
+/demo/remotion/src/amd-evidence.json
+/demo/remotion/src/subtitles.json
+/demo/remotion/src/voice-timing.json
 __pycache__/
 *.py[cod]
 .pytest_cache/

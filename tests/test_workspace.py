@@ -15,6 +15,7 @@ from test_phase3 import wav_bytes
 @pytest.fixture
 def ws(tmp_path, monkeypatch):
     monkeypatch.setenv('DUBGUARD_DATA_DIR', str(tmp_path))
+    monkeypatch.setenv('DUBGUARD_PUBLIC_AMD_ENABLED', 'false')
     monkeypatch.setenv('DUBGUARD_CLIENT_SESSIONS_PER_HOUR', '30')
     monkeypatch.setenv('DUBGUARD_CLIENT_UPLOADS_PER_HOUR', '90')
     monkeypatch.setenv('DUBGUARD_CLIENT_EDITS_PER_HOUR', '120')
@@ -191,10 +192,10 @@ def test_corrected_uncertainty_and_new_recording_invalidate_demo_decisions(ws):
     assert data['evidence'] is None and data['demo_decision'] is None and data['reviewed'] == []
 
 
-def test_custom_never_calls_amd_even_with_code_and_consent(ws):
+def test_custom_unconfigured_amd_never_constructs_provider(ws):
     c, s, _ = ws
     save(c,s)
-    assert c.post('/workspace/analyze?mode=amd&consent=true&expected_revision=1', headers={**headers(s), 'X-AMD-Demo-Code': 'valid-looking-but-no-escalation'}, content=b'not parsed').status_code == 403
+    assert c.post('/workspace/analyze?mode=amd&consent=true&expected_revision=1', headers=headers(s), content=b'not parsed').status_code == 503
     assert view(c,s)['analysis']['runs'] == 0
 
 

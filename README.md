@@ -26,8 +26,10 @@ The latest repository changes must not be assumed deployed.
 3. Analyze and inspect playback, recognized words, coverage and findings. Raw ASR
    remains provisional even when it appears correct. Quick Test never signs off.
 
-Local Verification makes no AMD request. AMD Semantic Review requires a separate
-operator-issued AMD code and fresh text-transfer consent for every analysis.
+Local Verification makes no AMD request. Both public workflows offer optional
+AMD Semantic Review with fresh text-transfer consent for every analysis, without
+an access code or login. It requires configured backend AMD credentials, the
+server enable switch, and available persistent hourly/daily/client budgets.
 Reviewer tokens are separate credentials intended only for authorized reviewers.
 Quick Test permits clips up to 60 seconds / 10 MB and three analyses per session;
 sessions expire after 30 minutes. See [deployment and access controls](DEPLOYMENT.md).

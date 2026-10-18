@@ -9,6 +9,7 @@ import {
   type QuickConfig,
 } from "../api";
 import { AudioInput } from "../components/Audio";
+import { PublicAMD } from "../components/PublicAMD";
 import { QuickResults } from "../components/QuickResults";
 export function QuickTest() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]),
@@ -24,7 +25,6 @@ export function QuickTest() {
     [retry, setRetry] = useState(0),
     [mode, setMode] = useState<"local" | "amd">("local"),
     [consent, setConsent] = useState(false),
-    [amdCode, setAmdCode] = useState(""),
     [config, setConfig] = useState<QuickConfig | null>(null),
     [error, setError] = useState("");
   const audio = useRef<HTMLAudioElement>(null);
@@ -105,7 +105,6 @@ export function QuickTest() {
           `&mode=${mode}&consent=${mode === "amd" && consent}`,
         file,
         credential,
-        mode === "amd" ? { "X-AMD-Demo-Code": amdCode } : undefined,
       );
       setFile(null);
       setChosen(false);
@@ -118,7 +117,6 @@ export function QuickTest() {
     }
   }
   async function discard() {
-    setAmdCode("");
     setConsent(false);
     setMode("local");
     try {
@@ -254,7 +252,7 @@ export function QuickTest() {
             </div>
             <div>
               <span>02 / AMD SEMANTICS</span>
-              <p>Optional DeepSeek text review. Separate authorization.</p>
+              <p>Optional DeepSeek text review with your consent.</p>
             </div>
             <div>
               <span>03 / HUMAN REVIEW</span>
@@ -463,63 +461,14 @@ export function QuickTest() {
                   scenarioName={selected}
                   onCaptureActive={setCaptureActive}
                 />
-                <div className="analysis-settings">
-                  <span className="eyebrow">ANALYSIS SETTINGS</span>
-                  <label>
-                    Verification mode
-                    <select
-                      value={mode}
-                      onChange={(e) => {
-                        setMode(e.target.value as "local" | "amd");
-                        setConsent(false);
-                      }}
-                    >
-                      <option value="local">Local Verification</option>
-                      <option value="amd">
-                        AMD Semantic Review · protected
-                      </option>
-                    </select>
-                  </label>
-                  {mode === "amd" && (
-                    <div className="notice">
-                      {!config?.amd_available && (
-                        <p className="restricted">
-                          AMD analysis unavailable on this server. Choose Local
-                          Verification to continue.
-                        </p>
-                      )}
-                      <label>
-                        AMD demo access code
-                        <input
-                          type="password"
-                          autoComplete="off"
-                          value={amdCode}
-                          onChange={(e) => {
-                            setAmdCode(e.target.value);
-                            setConsent(false);
-                          }}
-                          placeholder="Separate authorization from the operator"
-                        />
-                      </label>
-                      <p>
-                        DeepSeek-V4-Flash reviews the approved script, policy
-                        and provisional transcript through AMD Token Factory.
-                        Original audio stays on this server. One HTTP attempt
-                        per run; two AMD runs per session, including failures.
-                        Findings remain advisory.
-                      </p>
-                      <label className="check">
-                        <input
-                          type="checkbox"
-                          checked={consent}
-                          onChange={(e) => setConsent(e.target.checked)}
-                        />
-                        I consent to sending script, policy and transcript text
-                        to AMD for this analysis.
-                      </label>
-                    </div>
-                  )}
-                </div>
+                <PublicAMD
+                  mode={mode}
+                  consent={consent}
+                  available={!!config?.amd_available}
+                  unavailableReason={config?.amd_unavailable_reason}
+                  onMode={setMode}
+                  onConsent={setConsent}
+                />
 
                 <button
                   className="primary wide"
@@ -530,7 +479,6 @@ export function QuickTest() {
                     (report?.runs ?? 0) >= 3 ||
                     (mode === "amd" &&
                       (!config?.amd_available ||
-                        !amdCode ||
                         !consent ||
                         (report?.amd_runs ?? 0) >= 2))
                   }
@@ -546,8 +494,8 @@ export function QuickTest() {
                     ? "Both AMD runs are used, including failed runs. Choose Local Verification if attempts remain."
                     : !file
                       ? "Add a recording to enable analysis. Preview and save it first."
-                      : mode === "amd" && (!amdCode || !consent)
-                        ? "AMD requires its separate access code and consent for this run."
+                      : mode === "amd" && !consent
+                        ? "Consent is required for this AMD analysis."
                         : "Your original audio will be analyzed when you continue."}
               </p>
               {processing && (

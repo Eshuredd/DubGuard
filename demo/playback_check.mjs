@@ -1,0 +1,17 @@
+import {createRequire} from 'node:module';
+import fs from 'node:fs';
+const require=createRequire(new URL('../frontend/package.json',import.meta.url));
+const {chromium}=require('playwright');
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await browser.newPage({viewport:{width:1920,height:1080}});
+await page.goto('http://127.0.0.1:5190/DubGuard_Hackathon_Demo.mp4');
+await page.locator('video').waitFor();
+await page.waitForFunction(()=>document.querySelector('video')?.readyState>=2);
+const before=await page.locator('video').evaluate(async v=>{v.muted=true;v.currentTime=78;await new Promise(r=>v.addEventListener('seeked',r,{once:true}));await v.play();return {time:v.currentTime,width:v.videoWidth,height:v.videoHeight,duration:v.duration}});
+await page.waitForTimeout(1800);
+const after=await page.locator('video').evaluate(v=>({time:v.currentTime,paused:v.paused,error:v.error,decodedFrames:v.getVideoPlaybackQuality().totalVideoFrames}));
+if(after.time<=before.time+.5||after.error)throw Error('Playback failed');
+await page.locator('video').evaluate(v=>v.pause());
+fs.writeFileSync('demo/output/browser-playback.json',JSON.stringify({browser:'Installed Google Chrome',before,after,playback_verified:true},null,2));
+console.log(JSON.stringify({before,after}));
+await browser.close();

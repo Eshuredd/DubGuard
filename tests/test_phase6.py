@@ -18,7 +18,7 @@ from test_phase4 import amd, quick
 @pytest.fixture
 def public(tmp_path, monkeypatch):
     monkeypatch.setenv('DUBGUARD_DATA_DIR', str(tmp_path))
-    monkeypatch.setenv('DUBGUARD_AMD_DEMO_ACCESS_CODE', '')
+    monkeypatch.setenv('DUBGUARD_PUBLIC_AMD_ENABLED', 'false')
     monkeypatch.setenv('AMD_TOKEN_FACTORY_API_KEY', '')
     monkeypatch.setenv('DUBGUARD_TRUSTED_PROXIES', '')
     monkeypatch.delenv('DUBGUARD_CLIENT_SESSIONS_PER_HOUR', raising=False)
@@ -52,7 +52,7 @@ def test_always_public_without_configuration_or_code(public, monkeypatch, legacy
     else:
         monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO', legacy)
     monkeypatch.delenv('DUBGUARD_DEMO_ACCESS_CODE', raising=False)
-    assert c.get('/quick/config').json() == {'public_local': True, 'amd_available': False}
+    assert c.get('/quick/config').json() == {'public_local': True, 'amd_available': False, 'amd_unavailable_reason': 'configuration'}
     assert c.post('/quick/sessions').status_code == 200
     assert c.post('/quick/sessions', headers={'X-Demo-Code': 'irrelevant-old-header'}).status_code == 200
     assert create(c, monkeypatch)['max_runs'] == 3
@@ -168,26 +168,21 @@ def test_runtime_upload_slots_and_global_processing(public, monkeypatch):
     assert upload(c, s).status_code == 429
 
 
-def test_anonymous_amd_denied_without_consent_code_or_config(amd, monkeypatch):
+def test_anonymous_amd_requires_consent_and_config_without_code(amd, monkeypatch):
     c, s, calls, _ = amd
     s = c.post('/quick/sessions').json()
-    for code, consent, status in [('', True, 403), ('wrong', True, 403), ('phase6-separate-test-amd-code-long', False, 422)]:
-        r = c.post('/quick/analyze?scenario_id=correct&mode=amd&consent='+str(consent).lower(), headers={**bearer(s), 'X-AMD-Demo-Code': code}, files={'file': ('test.wav', wav_bytes(), 'audio/wav')})
-        assert r.status_code == status
-    for override in ['', 'private-test-code-short']:
-        monkeypatch.setenv('DUBGUARD_AMD_DEMO_ACCESS_CODE', override)
-        assert upload(c, s, mode='amd', consent=True).status_code == 503
+    assert upload(c, s, mode='amd', consent=False).status_code == 422
+    monkeypatch.setenv('DUBGUARD_PUBLIC_AMD_ENABLED', 'false')
+    assert upload(c, s, mode='amd', consent=True).status_code == 503
     assert not calls
     assert c.get('/quick/session', headers=bearer(s)).json()['runs'] == 0
     assert upload(c, s).status_code == 200 and not calls
 
 
 @pytest.mark.parametrize('setting,value', [
-    ('DUBGUARD_AMD_DEMO_ACCESS_CODE', 'too-short'),
-    ('DUBGUARD_REVIEW_TOKENS_JSON', '{"human":"phase6-separate-test-amd-code-long"}'),
-    ('DUBGUARD_REVIEW_TOKENS_JSON', 'not-json'),
+    ('DUBGUARD_PUBLIC_AMD_ENABLED', 'false'),
+    ('DUBGUARD_PUBLIC_AMD_ENABLED', 'typo'),
     ('AMD_TOKEN_FACTORY_API_KEY', ''),
-    ('AMD_TOKEN_FACTORY_API_KEY', 'phase6-separate-test-amd-code-long'),
     ('AMD_TOKEN_FACTORY_ENDPOINT', 'http://insecure.invalid'),
     ('AMD_TOKEN_FACTORY_MODEL', 'MiMo-V2.6-Flash'),
 ])
@@ -254,8 +249,10 @@ def test_new_install_configuration_is_private_distinct_and_never_overwrites(tmp_
     result = subprocess.run([sys.executable, 'deploy/create_env.py', str(path)], capture_output=True, text=True)
     assert result.returncode == 0
     values = dict(line.split('=', 1) for line in path.read_text().splitlines() if '=' in line and not line.startswith('#'))
-    codes = [values['DUBGUARD_AMD_DEMO_ACCESS_CODE'], json.loads(values['DUBGUARD_REVIEW_TOKENS_JSON'])['reviewer']]
-    assert len(set(codes)) == 2 and all(len(code) >= 24 and code not in result.stdout+result.stderr for code in codes)
+    code = json.loads(values['DUBGUARD_REVIEW_TOKENS_JSON'])['reviewer']
+    assert len(code) >= 24 and code not in result.stdout+result.stderr
+    assert 'DUBGUARD_AMD_DEMO_ACCESS_CODE' not in values
+    assert values['DUBGUARD_PUBLIC_AMD_ENABLED'] == 'false'
     assert values['AMD_TOKEN_FACTORY_API_KEY'] == ''
     assert not {'DUBGUARD_PUBLIC_LOCAL_DEMO', 'DUBGUARD_PUBLIC_WORKSPACE', 'DUBGUARD_DEMO_ACCESS_CODE'} & values.keys()
     prior = path.read_bytes()
@@ -294,18 +291,18 @@ def test_same_client_cannot_hold_parallel_upload_bodies(public, monkeypatch):
     asyncio.run(exercise())
 
 
-def test_non_ascii_code_headers_are_rejected_without_server_errors(amd):
+def test_obsolete_non_ascii_code_headers_are_ignored_without_server_errors(amd):
     c, s, calls, _ = amd
     # Raw bytes exercise HTTP Latin-1 header decoding without httpx ASCII encoding.
-    assert c.post('/quick/analyze?scenario_id=correct&mode=amd&consent=true', headers=[(b'authorization', bearer(s)['Authorization'].encode()), (b'x-amd-demo-code', b'\xff'*25)]).status_code == 403
+    assert c.post('/quick/analyze?scenario_id=correct&mode=amd&consent=true', headers=[(b'authorization', bearer(s)['Authorization'].encode()), (b'x-amd-demo-code', b'\xff'*25)]).status_code == 422
     assert c.post('/quick/sessions', headers=[(b'x-demo-code', b'\xff'*25)]).status_code == 200
     assert not calls
 
 
-def test_invalid_amd_code_attempts_share_client_upload_budget(amd, monkeypatch):
+def test_missing_consent_attempts_share_client_upload_budget(amd, monkeypatch):
     c, s, calls, _ = amd
     monkeypatch.setenv('DUBGUARD_CLIENT_UPLOADS_PER_HOUR', '2')
     for _ in range(2):
-        assert upload(c, s, mode='amd', consent=True).status_code == 403
+        assert upload(c, s, mode='amd', consent=False).status_code == 422
     assert upload(c, s).status_code == 429
     assert not calls

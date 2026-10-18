@@ -113,9 +113,15 @@ Operation timeouts do not bound total wall time. Connect/read/write/pool failure
 are distinguished without exposing raw error bodies or credentials; read timeout
 cannot isolate server generation from network delay.
 
-Quick Test requires a session capability, separate AMD code and fresh consent.
-The code stays in React memory and a header; public local admission never enables
-paid inference. Reviewer hybrid calls retain independent bearer authentication.
+Public sample and custom AMD reviews require a temporary session capability and
+fresh consent, without an access code. Server configuration and the emergency
+switch gate availability. SQLite atomically reserves rolling global hourly/daily
+and browser/network client budgets with the session attempt. Failed attempts
+persist across session deletion and process restarts. Public calls force zero
+retries, 1,024 output tokens and a conservative 32,768 input-token bound; excess
+text is rejected before HTTP without truncating citations. Custom findings remain
+bound to the analyzed reference version and raw provisional transcript. Reviewer
+hybrid calls retain independent bearer authentication.
 [Access limits/proxy trust](../DEPLOYMENT.md#configuration) are enforced server-side.
 
 MiMo-V2.6-Flash is a separate optional audio-probe scaffold: base64 PCM WAV, local

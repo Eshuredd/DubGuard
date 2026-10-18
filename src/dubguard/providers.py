@@ -119,6 +119,7 @@ class AMDTokenFactoryProvider:
     max_retries: int | None = None
     timeout_seconds: float | None = None
     max_output_tokens: int | None = None
+    max_input_tokens: int | None = None
     capture_response: bool = False
     captured_response: dict | None = field(default=None, init=False, repr=False)
     endpoint: str | None = field(default=None, init=False, repr=False)
@@ -202,6 +203,13 @@ class AMDTokenFactoryProvider:
         assert self.api_key is not None
         url = self._url()
         assert url is not None
+        payload = self._payload(request, basic=basic, policy_baseline=policy_baseline)
+        if self.max_input_tokens is not None:
+            # UTF-8 bytes conservatively bound byte-level tokenizer input, plus
+            # fixed message framing allowance. Reject, never truncate citations.
+            bound = sum(len(m['content'].encode('utf-8')) for m in payload['messages']) + 256
+            if bound > self.max_input_tokens:
+                return self._unavailable("Text exceeds the public AMD input budget; local findings remain available.", error_class="input_limit")
         attempts = 0
         began = time.perf_counter()
         retries = min(3, max(0, self.max_retries)) if self.max_retries is not None else _bounded_int("AMD_TOKEN_FACTORY_MAX_RETRIES", 2, 0, 3)
@@ -215,8 +223,7 @@ class AMDTokenFactoryProvider:
                 attempts = attempt + 1
                 try:
                     response = client.post(url, headers=headers,
-                                           json=self._payload(request, basic=basic,
-                                                              policy_baseline=policy_baseline), timeout=timeout_config)
+                                           json=payload, timeout=timeout_config)
                 except (httpx.TimeoutException, httpx.TransportError) as exc:
                     if attempt < retries:
                         time.sleep(self._retry_delay(None, attempt))

@@ -35,6 +35,71 @@ async function save(page: import("@playwright/test").Page) {
   );
 }
 
+test("public custom AMD uses fresh consent, validated citations and no access code", async ({
+  page,
+}) => {
+  await save(page);
+  await page
+    .getByLabel("Upload audio", { exact: true })
+    .setInputFiles({
+      name: "synthetic.wav",
+      mimeType: "audio/wav",
+      buffer: silence(),
+    });
+  await page.getByLabel("Verification mode").selectOption("amd");
+  await expect(page.getByLabel(/access code/i)).toHaveCount(0);
+  const analyze = page.getByRole("button", {
+    name: "Analyze recording with AMD",
+  });
+  await expect(analyze).toBeDisabled();
+  await page.getByLabel("I consent to sending script").check();
+  await page.getByLabel("Verification mode").selectOption("local");
+  await page.getByLabel("Verification mode").selectOption("amd");
+  await expect(
+    page.getByLabel("I consent to sending script"),
+  ).not.toBeChecked();
+  await page.getByLabel("I consent to sending script").check();
+  await capture(page, "custom-amd-consent");
+  const submitted = page.waitForRequest(
+    (r) => r.url().includes("/workspace/analyze") && r.method() === "POST",
+  );
+  await analyze.click();
+  const request = await submitted;
+  expect(request.url()).toContain("consent=true");
+  expect(request.headers()["x-amd-demo-code"]).toBeUndefined();
+  await expect(page.getByLabel("AMD Semantic Review result")).toContainText(
+    "Status: completed",
+  );
+  await expect(page.getByLabel("AMD Semantic Review result")).toContainText(
+    "playwright-mock-no-real-AMD",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Local verification findings" }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("I consent to sending script"),
+  ).not.toBeChecked();
+  const cap = await page.evaluate(() =>
+    sessionStorage.getItem("dubguard-custom"),
+  );
+  const exported = await (
+    await page.request.get("/api/workspace/export", {
+      headers: { Authorization: "Bearer " + cap },
+    })
+  ).json();
+  expect(
+    exported.analysis.semantic_verification.semantic.findings.length,
+  ).toBeGreaterThan(0);
+  expect(exported.workspace.demo_decision).toBeNull();
+  await capture(page, "custom-amd-evidence");
+  await page
+    .getByLabel("AMD Semantic Review result")
+    .screenshot({
+      path: "../reports/local/public-amd/custom-amd-findings.png",
+    });
+  await page.getByRole("button", { name: "Delete temporary review" }).click();
+});
+
 test("public editors do not depend on activation configuration", async ({
   page,
 }) => {

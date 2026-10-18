@@ -9,13 +9,15 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('path', type=Path)
 args = parser.parse_args()
 reviewer = secrets.token_urlsafe(32)
-amd_demo = secrets.token_urlsafe(32)
 config = '\n'.join([
     '# Private server configuration. Do not copy into frontend or commit.',
     'DUBGUARD_REVIEW_TOKENS_JSON=' + json.dumps({'reviewer': reviewer}, separators=(',', ':')),
     'DUBGUARD_CLIENT_EDITS_PER_HOUR=60',
     'DUBGUARD_OPERATOR_LOGINS_PER_HOUR=8',
-    'DUBGUARD_AMD_DEMO_ACCESS_CODE=' + amd_demo,
+    'DUBGUARD_PUBLIC_AMD_ENABLED=false',
+    'DUBGUARD_AMD_REQUESTS_PER_HOUR=10',
+    'DUBGUARD_AMD_REQUESTS_PER_DAY=40',
+    'DUBGUARD_AMD_CLIENT_REQUESTS_PER_DAY=4',
     'DUBGUARD_CLIENT_SESSIONS_PER_HOUR=4',
     'DUBGUARD_CLIENT_UPLOADS_PER_HOUR=6',
     'DUBGUARD_TRUSTED_PROXIES=',

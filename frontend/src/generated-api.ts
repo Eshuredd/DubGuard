@@ -1148,6 +1148,8 @@ export interface components {
     QuickConfig: {
       /** Amd Available */
       amd_available: boolean;
+      /** Amd Unavailable Reason */
+      amd_unavailable_reason?: ("configuration" | "quota") | null;
       /** Public Local */
       public_local: boolean;
     };
@@ -1781,7 +1783,6 @@ export interface operations {
         consent?: boolean;
       };
       header?: {
-        "x-amd-demo-code"?: string;
         authorization?: string | null;
       };
       path?: never;
@@ -2823,7 +2824,8 @@ export interface operations {
     parameters: {
       query: {
         expected_revision: number;
-        mode?: "local";
+        mode?: "local" | "amd";
+        consent?: boolean;
       };
       header?: {
         authorization?: string | null;

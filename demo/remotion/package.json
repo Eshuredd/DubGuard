@@ -1,0 +1,21 @@
+{
+  "name": "dubguard-cinematic-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.tsx",
+    "render": "remotion render src/index.tsx DubGuard ../output/DubGuard_Hackathon_Demo_Final.mp4 --codec=h264 --audio-codec=aac --crf=21 --audio-bitrate=192k --concurrency=4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.536",
+    "@remotion/cli": "4.0.536",
+    "@remotion/renderer": "4.0.536",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.536",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,170 @@
+[
+  {
+    "id": "01",
+    "start": 0.8,
+    "end": 5.1,
+    "text": "An approved instruction can change in a single word."
+  },
+  {
+    "id": "02",
+    "start": 5.3,
+    "end": 10.5,
+    "text": "Switch the power off... becomes switch the power on."
+  },
+  {
+    "id": "03",
+    "start": 10.8,
+    "end": 14.5,
+    "text": "One word. A different instruction."
+  },
+  {
+    "id": "04",
+    "start": 15.0,
+    "end": 19.1,
+    "text": "How do you catch it before release?"
+  },
+  {
+    "id": "05",
+    "start": 20.0,
+    "end": 24.6,
+    "text": "Meet DubGuard. Catch the one word that changes everything."
+  },
+  {
+    "id": "06",
+    "start": 25.8,
+    "end": 33.6,
+    "text": "DubGuard helps industrial training teams review narration against explicit, protected instructions."
+  },
+  {
+    "id": "07",
+    "start": 34.1,
+    "end": 43.8,
+    "text": "Define the reference, record or upload a take, and inspect the evidence before release. Here is the actual application."
+  },
+  {
+    "id": "08",
+    "start": 45.8,
+    "end": 53.4,
+    "text": "Create a Review lets visitors bring their own script. Our reference is: switch the power off."
+  },
+  {
+    "id": "09",
+    "start": 54.0,
+    "end": 61.7,
+    "text": "We protect the power state: off must remain off. On is the declared reversal."
+  },
+  {
+    "id": "10",
+    "start": 62.3,
+    "end": 69.3,
+    "text": "Saving creates a temporary demo policy, not an organizationally approved instruction."
+  },
+  {
+    "id": "11",
+    "start": 70.7,
+    "end": 77.4,
+    "text": "Now we select the original human recording, on-off dot wav, and preview the take."
+  },
+  {
+    "id": "12",
+    "start": 82.0,
+    "end": 88.8,
+    "text": "Analyze runs the actual local CPU Whisper pipeline. The original file is preserved."
+  },
+  {
+    "id": "13",
+    "start": 89.3,
+    "end": 97.7,
+    "text": "The recognized words are: switch the power on. They are provisional, with an approximate zero-to-two-second source span."
+  },
+  {
+    "id": "14",
+    "start": 98.2,
+    "end": 106.2,
+    "text": "DubGuard flags a suspected polarity reversal. The actual outcome is review required, not a confirmed violation."
+  },
+  {
+    "id": "15",
+    "start": 106.8,
+    "end": 114.1,
+    "text": "Open the source references and return to the original audio. Recognition is evidence to inspect, not ground truth."
+  },
+  {
+    "id": "16",
+    "start": 115.7,
+    "end": 123.6,
+    "text": "The architecture starts with local audio processing, provisional transcription, and deterministic protected-rule checks."
+  },
+  {
+    "id": "17",
+    "start": 124.0,
+    "end": 132.7,
+    "text": "Optional AMD Token Factory review sends script, policy, and transcript text to DeepSeek V4 Flash. Original audio stays local."
+  },
+  {
+    "id": "18",
+    "start": 133.4,
+    "end": 141.6,
+    "text": "This is historical live AMD text inference: a previously authorized example, separate from the recording you just saw."
+  },
+  {
+    "id": "19",
+    "start": 142.1,
+    "end": 148.6,
+    "text": "The saved response cites the off-on reversal, with two validated source spans and zero citation issues."
+  },
+  {
+    "id": "20",
+    "start": 149.0,
+    "end": 154.5,
+    "text": "Model advice remains advisory. Citation validation leads back to human evidence review."
+  },
+  {
+    "id": "21",
+    "start": 155.7,
+    "end": 162.8,
+    "text": "Back in the application, a reviewer can replay the original and inspect the recognized words."
+  },
+  {
+    "id": "22",
+    "start": 163.3,
+    "end": 171.4,
+    "text": "Spoken evidence should be corrected only after listening. This capture leaves human confirmation pending."
+  },
+  {
+    "id": "23",
+    "start": 171.9,
+    "end": 179.3,
+    "text": "A temporary note preserves the need for further review. Export retains the evidence for inspection."
+  },
+  {
+    "id": "24",
+    "start": 179.7,
+    "end": 184.6,
+    "text": "Demo decisions are separate from authenticated organizational sign-off."
+  },
+  {
+    "id": "25",
+    "start": 185.8,
+    "end": 191.7,
+    "text": "Off and on. Fifteen and fifty. Before and after. Small changes deserve careful review."
+  },
+  {
+    "id": "26",
+    "start": 192.3,
+    "end": 200.8,
+    "text": "Local speech transcription. Protected instruction checks. AMD-assisted semantic review. Source-linked evidence. Human-controlled decisions."
+  },
+  {
+    "id": "27",
+    "start": 201.3,
+    "end": 206.8,
+    "text": "DubGuard is a review aid. Critical or unresolved evidence must never become automatic approval."
+  },
+  {
+    "id": "28",
+    "start": 208.1,
+    "end": 213.6,
+    "text": "DubGuard. Catch the one word that changes everything."
+  }
+]
