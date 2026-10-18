@@ -72,7 +72,6 @@ blob-report/
 /reports/**/*.xml
 /junit*.xml
 /pytest*.xml
-!/reports/phase6/after/landing-desktop.png
-!/reports/phase6/after/local-evidence-desktop.png
-!/reports/phase6/after/amd-mocked-desktop.png
-!/reports/phase6/after/critical-signoff-mobile.png
+# Personal learning notes and regenerated Markdown summaries stay local.
+/.vibe-wise/
+/reports/evaluation.md

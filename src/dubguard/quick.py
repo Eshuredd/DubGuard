@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile, Request
 from fastapi.responses import Response
-from .audio import AudioStore, AudioArtifact, AUDIO_MIME, transcribe_artifact
+from .audio import AudioStore, AUDIO_MIME, transcribe_artifact
 from .alignment import propose_alignment
 from .engine import verify
 from .providers import AMDTokenFactoryProvider, DisabledProvider

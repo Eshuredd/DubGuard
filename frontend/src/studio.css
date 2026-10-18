@@ -420,17 +420,6 @@
     text-decoration: none;
     border: 1px solid transparent;
   }
-  .sidebar-history {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    margin-top: 20px;
-    border-top: 1px solid #34505a;
-    color: #b9cbd0;
-    font-size: 13px;
-    text-decoration: none;
-  }
   .sidebar-nav a:hover {
     background: #203941;
   }

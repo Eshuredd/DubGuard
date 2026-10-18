@@ -2,7 +2,7 @@
 import { chromium } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 const url = "https://134-209-145-248.sslip.io/test";
-const dir = "../reports/phase6/public-baseline";
+const dir = "../reports/local/public-audit";
 mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome" });
 try {

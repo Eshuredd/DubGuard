@@ -1,150 +1,146 @@
 # DubGuard — Industrial Narration Review
 
-DubGuard helps human reviewers check English, single-speaker industrial narration
-against approved instructions. It makes changes to protected numbers, polarity,
-warnings and operation order inspectable through original audio and source-linked
-findings. It supports browser recording, uploads and a separate reviewer workspace.
+DubGuard helps reviewers compare recorded industrial instructions with a reference
+script. Small changes such as **off → on**, a changed quantity, an omitted warning,
+or reversed procedure order become findings linked to the original evidence.
 
-**DubGuard is a review aid. `PASS_CANDIDATE` is not safety certification or release
-approval. Uncertain evidence and confirmed violations block approval.**
+**DubGuard is a review aid, not safety certification. A `PASS_CANDIDATE` is not
+release approval. ASR and model advice cannot establish what was actually spoken.**
 
-## Try it
+[Try a Sample](https://134-209-145-248.sslip.io/test) ·
+[Create a Review](https://134-209-145-248.sslip.io/workspace) ·
+[GitHub](https://github.com/Eshuredd/DubGuard)
 
-The DigitalOcean installation is at
-[Quick Test](https://134-209-145-248.sslip.io/test), with a separate
-[Reviewer Workspace](https://134-209-145-248.sslip.io/login).
-The [recorded public audit](reports/phase6/public-baseline/audit.json) observed
-HTTP 200 on 17 October 2026 at 18:17 UTC. Read-only HEAD checks of `/test` and
-`/login` also returned HTTP 200 during cleanup on 18 October 2026. These confirm
-route reachability, not the running revision, API readiness or microphone behavior.
-The latest repository changes must not be assumed deployed.
+The public installation is hosted on DigitalOcean. Its deployed revision is not
+recorded in this checkout; do not assume the latest source is already deployed.
 
-1. Open **Try a Sample** or **Create a Review**. Both are immediately usable
-   without a login, access code or activation setting.
-2. Choose a demonstration scenario and **Local Verification**. Record or upload
-   a short clip, preview it, and save the original before submitting if needed.
-3. Analyze and inspect playback, recognized words, coverage and findings. Raw ASR
-   remains provisional even when it appears correct. Quick Test never signs off.
+## Public workflows
 
-Local Verification makes no AMD request. Both public workflows offer optional
-AMD Semantic Review with fresh text-transfer consent for every analysis, without
-an access code or login. It requires configured backend AMD credentials, the
-server enable switch, and available persistent hourly/daily/client budgets.
-Reviewer tokens are separate credentials intended only for authorized reviewers.
-Quick Test permits clips up to 60 seconds / 10 MB and three analyses per session;
-sessions expire after 30 minutes. See [deployment and access controls](DEPLOYMENT.md).
+- **Try a Sample:** choose one of six scenarios, record or upload narration,
+  preview/download the original, analyze, and inspect source-linked findings.
+- **Create a Review:** write a reference, define protected number, polarity,
+  warning and sequence requirements, then analyze your recording. Listen before
+  correcting provisional words; save temporary notes, demo decisions and exports.
+- **Verification mode:** Local Verification runs deterministic rules on the
+  server. Optional AMD Semantic Review requires fresh, unchecked consent for
+  each analysis, with no login or access code. Both sets of findings stay visible.
+
+Public sessions expire after 30 minutes and allow three analyses, including at
+most two AMD attempts. Recordings are limited to 60 seconds and 10 MB. Anonymous
+demo decisions never create authenticated organizational approval.
+
+![Sample narration review](docs/images/sample-review.png)
+
+![Custom reference editor](docs/images/custom-review.png)
+
+These local browser captures use synthetic audio and stub recognition; any AMD
+responses shown by the test suite are mocked. They illustrate the UI, not accuracy.
 
 ## How it works
 
 ```text
-Approved script + reviewer policy       Original recording
-                 |                            |
-                 |                   FFmpeg + local CPU Whisper
-                 |                            |
-                 +------ deterministic checks + provisional transcript
-                                      |
-                        optional AMD semantic advice
-                        + exact source citation validation
-                                      |
-                     human listening + versioned evidence
-                                      |
-                     current-run review and explicit sign-off
+Reference script + protected requirements       Original recording
+                  |                                    |
+                  |                         FFmpeg + local CPU Whisper
+                  +-------- deterministic checks + provisional transcript
+                                             |
+                              optional AMD semantic advice
+                              + exact source citation validation
+                                             |
+                             human listening + versioned evidence
+                                             |
+                             protected review and explicit sign-off
 ```
 
-The stack is React, TypeScript and Vite; Python, FastAPI and Pydantic;
-FFmpeg and faster-whisper/CTranslate2; SQLite; Docker Compose and Caddy HTTPS.
-AMD Token Factory provides opt-in **DeepSeek-V4-Flash** text inference. It receives
-script, policy and transcript text; original audio stays on the server. Model
-advice cannot override deterministic violations, establish spoken truth or approve
-a recording. Unsupported citations become unresolved evidence.
+**AMD Token Factory / DeepSeek-V4-Flash** receives only reference, requirement and
+provisional transcript text. Original audio is not sent to DeepSeek. The provider
+key stays on the backend. Returned requirement IDs, instruction/segment IDs and
+exact quoted spans are validated locally; unsupported citations require review.
+AMD advice cannot erase deterministic violations or approve a recording.
+
+Public AMD is disabled by default until the operator configures the provider and
+enables it. Persistent SQLite quotas default to **10 attempts/hour, 40/day and
+4/client/day**, shared across both workflows. Failed attempts count. Public calls
+use zero retries, one concurrent request, bounded input/output and an emergency
+disable switch. See [configuration and operations](DEPLOYMENT.md#public-amd-inference).
+
+Private reviewers enter through `/operator/login` or `/operator`. Separate
+authentication protects policy approval, original audio, evidence revisions,
+audit history and sign-off. Critical or unresolved evidence blocks approval.
+Private entry links are intentionally absent from public navigation.
+
+The stack is React, TypeScript and Vite; Python, FastAPI and Pydantic; FFmpeg,
+faster-whisper/CTranslate2 on CPU; SQLite; Docker Compose and Caddy HTTPS.
 
 ## Run locally
 
 Use Python 3.11+ and Node.js 22.22.2+ (22.x), 24.15+ (24.x), or 26+.
-From the repository root, in Bash:
+From the repository root in Bash:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt -e .
-.venv/bin/python -m dubguard validate examples/policy.json
-.venv/bin/python -m dubguard verify examples/critical.json
-.venv/bin/python -m pytest -q
 npm --prefix frontend ci
+.venv/bin/python -m dubguard verify examples/critical.json
 ```
 
-On Windows use `py -3.12 -m venv .venv` and `.venv/Scripts/python` in place of
-`.venv/bin/python`. Deterministic verification requires no key, GPU or model.
-CLI exit code 0 means successful execution; read the JSON `decision` for the result.
+On Windows, create the environment with `py -3.12 -m venv .venv` and use
+`.venv/Scripts/python` instead of `.venv/bin/python`. Deterministic CLI verification
+needs no model or API key; read the JSON decision rather than treating exit 0 as approval.
 
-For recording and transcription, install the audio dependencies and explicitly
-cache the pinned public model (this downloads weights, with no AMD inference):
+For audio, install the optional dependencies and explicitly cache the pinned
+Whisper model. This downloads public weights and makes no AMD request:
 
 ```bash
 .venv/bin/python -m pip install -r requirements-audio.txt
 .venv/bin/python deploy/cache_model.py --revision 0d3d19a32d3338f10357c0889762bd8d64bbdeba --output .dubguard-data/models/tiny.en
 ```
 
-Copy [.env.example](.env.example) to a private, ignored `.env` and configure:
+Copy `.env.example` to a private, ignored `.env`. Set `DUBGUARD_WHISPER_MODEL` to
+the cached model's absolute directory and `DUBGUARD_DATA_DIR` to a private writable
+directory. For local Uvicorn, export these variables into its environment; the
+provider/CLI dotenv loader is not general server configuration. Add reviewer or
+AMD credentials only for those optional workflows. Never put secrets in Vite
+variables, browser storage, URLs, screenshots or Git.
 
-- `DUBGUARD_WHISPER_MODEL`: absolute path to that cached model directory.
-- `DUBGUARD_DATA_DIR`: private writable directory for SQLite and original audio.
-- `DUBGUARD_REVIEW_TOKENS_JSON`: `{"reviewer-id":"unique-random-secret"}`.
-
-Sample and custom local reviews are always public. AMD settings are optional;
-leave the API key blank for local-only use. Never reuse secrets or put server keys
-in Vite configuration. See [complete configuration](DEPLOYMENT.md#configuration).
-
-Start the API and frontend in separate terminals:
+Start the backend and frontend in separate terminals:
 
 ```bash
 .venv/bin/python -m uvicorn dubguard.api:app --host 127.0.0.1 --port 8000
 npm --prefix frontend run dev
 ```
 
-Open [localhost Quick Test](http://127.0.0.1:5173/test) or
-[Create a Review](http://127.0.0.1:5173/workspace). The custom workspace opens
-without login or server activation. Local verification works without AMD keys.
-Private operational reviews use
-`/operator`. See [configuration and upgrade notes](PUBLIC_WORKSPACE.md).
-Vite proxies `/api` to
-FastAPI; the [local API schema](http://127.0.0.1:8000/docs) describes request bodies.
-Recording requires HTTPS or localhost. Runtime never downloads missing models.
-Use the [local container protocol](DEPLOYMENT.md#local-container-validation) to
-test the production build, same-origin routing and persistent storage.
+Open [local Quick Test](http://127.0.0.1:5173/test) or
+[local Create a Review](http://127.0.0.1:5173/workspace). Vite proxies `/api` to
+FastAPI. Recording needs HTTPS or localhost; missing models are never downloaded
+automatically. See [deployment](DEPLOYMENT.md) for Docker, secrets, backups and rollback.
 
-## What has been verified
+## Results and limitations
 
-The [60-case synthetic development evaluation](docs/EVALUATION.md) measured
-22/24 critical recall (91.67%), 22/22 critical-alert precision and 0/24
-acceptable-to-critical alerts for the deterministic engine. Two critical semantic
-challenges escalate to human review and count as recall misses. These fixtures
-are neither held-out data nor independent industrial ground truth.
+The [60-case synthetic development evaluation](docs/EVALUATION.md) reports
+22/24 critical recall (91.67%), 22/22 critical-alert precision and zero
+acceptable-to-critical alerts on 24 acceptable examples. Two critical semantic
+challenges escalate to review and count as recall misses. This is not held-out
+industrial ground truth.
 
-One [live AMD manual-text smoke](reports/phase4/amd_smoke.json) returned two valid
-off/on citation spans in 16.393 seconds using 805 tokens. Its
-[saved inspection](reports/phase4/amd_smoke_inspection.json) checked provenance and
-preserved the local critical decision. One example does not establish general
-semantic reliability or audio accuracy. Earlier rejected-citation and timeout
-observations are also retained.
+One [historical live AMD text smoke](reports/phase4/amd_smoke.json) returned two
+valid off/on source spans in 16.393 seconds using 805 tokens. Its
+[offline inspection](reports/phase4/amd_smoke_inspection.json) preserved the local
+critical decision. Earlier rejected citations and a timeout are also retained.
+One example does not establish general semantic or speech accuracy.
 
-Automated browser checks use synthetic microphone audio and stubbed recognition;
-container checks exercised real CPU Whisper on generated silence. Physical
-microphones, Safari capture, independently adjudicated speech accuracy, realistic
-concurrent load, ROCm, Quark and MiMo inference remain unverified or unmeasured.
-Numeric/language grammar is intentionally limited. Shared-token authentication,
-SQLite history and in-process jobs suit a controlled single-server demonstration.
+Browser tests use synthetic audio, stub ASR and mocked AMD. Historical CPU/container
+smokes used real Whisper on silence. Original demo recordings and local results are
+preserved privately, but independent human adjudication, speech-accuracy metrics,
+physical Safari capture and realistic load testing remain incomplete. English,
+single-speaker input and a limited numeric/language grammar are supported. Run one
+API process: SQLite history and in-process jobs suit a bounded demonstration.
+No ROCm, Quark or AMD Developer Cloud execution is claimed.
 
 ## Guides and evidence
 
-- [Architecture, evidence and human review](docs/ARCHITECTURE.md)
-- [Evaluation methodology, results and test commands](docs/EVALUATION.md)
-- [Deployment, upgrades, backups and rollback](DEPLOYMENT.md)
-- [Real-audio collection and evaluation](docs/RECORDING_GUIDE.md)
-- [Hackathon submission material and demonstration script](docs/SUBMISSION.md)
-
-Representative UI captures: [landing](reports/phase6/after/landing-desktop.png),
-[local evidence](reports/phase6/after/local-evidence-desktop.png),
-[AMD panel](reports/phase6/after/amd-mocked-desktop.png) and
-[mobile review](reports/phase6/after/critical-signoff-mobile.png).
-These are automated local captures with synthetic audio, stub ASR and mocked AMD
-responses where shown; they are not live inference or speech-quality evidence.
+- [Architecture and trust boundaries](docs/ARCHITECTURE.md)
+- [Evaluation methodology, evidence and regression commands](docs/EVALUATION.md)
+- [Deployment, configuration, backups and recovery](DEPLOYMENT.md)
+- [Real-audio collection and testing](docs/RECORDING_GUIDE.md)
+- [Hackathon submission material](docs/SUBMISSION.md) and [demo reproduction](demo/README.txt)

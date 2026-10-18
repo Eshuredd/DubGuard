@@ -83,10 +83,6 @@ function Shell() {
             </>
           )}
         </nav>
-        <NavLink className="sidebar-history" to="/operator">
-          <Icon name="shield" />
-          {operatorSignedIn() ? "Operator workspace" : "Operator access"}
-        </NavLink>
         <div className="sidebar-principle">
           <Icon name="shield" size={26} />
           <strong>Evidence before approval.</strong>
@@ -155,7 +151,6 @@ function Shell() {
           <nav aria-label="Mobile workspace">
             <NavLink to="/test">Try a Sample</NavLink>
             <NavLink to="/workspace">Create a Review</NavLink>
-            <NavLink to="/operator">Operator access</NavLink>
           </nav>
         </details>
         <main id="main" key={location.pathname}>

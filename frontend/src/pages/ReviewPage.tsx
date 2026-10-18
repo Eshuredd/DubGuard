@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import {
-  request,
-  post,
-  saveJSON,
-  type Workflow,
-  type Transcript,
-} from "../api";
+import { request, post, saveJSON, type Workflow } from "../api";
 import { AudioPlayer, jump } from "../components/Audio";
 import { TextComparison } from "../components/TextComparison";
 import {

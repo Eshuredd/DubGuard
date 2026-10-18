@@ -1,26 +1,25 @@
 # Deployment and operations
 
-The existing installation is a user-reported DigitalOcean Ubuntu 24.04 Droplet
-with 4 vCPUs / 8 GB at [Quick Test](https://134-209-145-248.sslip.io/test).
-The [GET-only audit](reports/phase6/public-baseline/audit.json) observed HTTP 200
-on 17 October 2026 at 18:17 UTC without credentials or mutations. Read-only HEAD
-checks of `/test` and `/login` returned HTTP 200 during cleanup on 18 October 2026.
-These do not identify the deployed revision or verify API readiness, physical
-microphones or the latest repository's public admission controls. Do not assume
-latest GitHub code is deployed. No production changes are part of cleanup.
+The existing DigitalOcean installation is at
+[DubGuard](https://134-209-145-248.sslip.io/). The reported host is Ubuntu 24.04,
+4 vCPUs / 8 GB. The deployed Git SHA is not recorded in this checkout. Historical
+HTTP 200 observations establish reachability only; verify the running image and
+release record before choosing an upgrade procedure. Cleanup does not access or
+modify the running server.
 
-Use the existing-installation upgrade procedure below for that server. Never
-initialize new secrets, change the Compose project name or replace its data/model
-volumes as though it were a fresh installation. Deployment requires a separately
-approved exact committed/pushed revision; never deploy a moving `main` reference.
+Use the existing project, environment, volumes and credentials for upgrades.
+Never initialize an existing installation as a new one. Deploy only an approved,
+pushed exact commit, with backups and retained rollback images.
 
 ## Configuration
 
-For the new no-login custom flow see [Public Workspace](PUBLIC_WORKSPACE.md).
-Both `/test` and `/workspace` always allow temporary local reviews without an
-access code or activation setting. This release changes public availability as
-soon as deployed; finish local security tests and the backup before updating. Operator UI credentials are now exchanged
-for expiring HttpOnly cookies; operators sign in again after this update.
+Both `/test` and `/workspace` allow temporary local reviews without login or
+access codes, within server limits. Optional public AMD requires the provider,
+enable switch and quotas below. Private reviewers use `/operator/login` or
+`/operator`; the public navigation contains only Try a Sample and Create a Review.
+Operator credentials are exchanged for expiring HttpOnly cookies. Authentication,
+policy approval, audit history and sign-off remain protected; see
+[trust boundaries](docs/ARCHITECTURE.md#public-sessions-and-private-reviewers).
 
 Private API configuration belongs in the existing `/etc/dubguard/server.env`,
 root-owned mode 0600, outside Git/build context. Do not loosen permissions to make
@@ -136,14 +135,13 @@ and post-backup writes. Do not restore an older quota database to reset allowanc
 
 ## Upgrade the existing DigitalOcean installation
 
-### Frontend-only refinement release
+### Frontend-only update
 
-This UI change does not require an API restart, migration, credential change or
-model download. Use the narrower procedure below **only after the exact release
-commit is approved and pushed**, and after confirming the deployed API is compatible
-with the starting revision `3abb735db75261a4165d269a0d217054da7b4788`. If its deployed
-revision is unknown or backend/configuration changes are pending, stop and use the
-full upgrade procedure instead. No deployment was performed as part of refinement.
+Use this procedure for a frontend-only release after confirming that the
+deployed API matches the release's backend and contracts. If the deployed revision
+is unknown, or any backend/deployment configuration differs, use the full upgrade
+below. Documentation and unused CSS removal require no database migration,
+credential rotation or model download. No update is executed by this guide.
 
 In the existing server checkout, define `dc` as the operator's **existing exact**
 Compose invocation (same project name, files, overrides and interpolation env).
@@ -170,7 +168,7 @@ test -n "$WEB_CONTAINER" && test -n "$API_CONTAINER" || exit 1
 OLD_WEB_IMAGE="$(sudo docker inspect --format '{{.Image}}' "$WEB_CONTAINER")"
 WEB_IMAGE_TAG="$(sudo docker inspect --format '{{.Config.Image}}' "$WEB_CONTAINER")"
 test -n "$OLD_WEB_IMAGE" && test -n "$WEB_IMAGE_TAG" || exit 1
-sudo docker image tag "$OLD_WEB_IMAGE" dubguard-web-rollback:pre-ux-refinement || exit 1
+sudo docker image tag "$OLD_WEB_IMAGE" dubguard-web-rollback:before-update || exit 1
 git checkout --detach "$RELEASE_REVISION" || exit 1
 test "$(git rev-parse HEAD)" = "$RELEASE_REVISION" || exit 1
 dc config --quiet || exit 1
@@ -180,7 +178,7 @@ dc up -d --no-deps --no-build web || exit 1
 test "$(dc ps -q api)" = "$API_CONTAINER" || exit 1
 curl --fail --silent --show-error "$DUBGUARD_ORIGIN/api/health" >/dev/null || exit 1
 curl --fail --silent --show-error "$DUBGUARD_ORIGIN/test" >/dev/null || exit 1
-curl --fail --silent --show-error "$DUBGUARD_ORIGIN/login" >/dev/null || exit 1
+curl --fail --silent --show-error "$DUBGUARD_ORIGIN/operator/login" >/dev/null || exit 1
 dc ps
 ```
 
@@ -207,14 +205,16 @@ secrets for a web-only update. The commands above preserve persisted audio and
 review history. They intentionally leave server-specific values to the operator;
 the local checkout cannot establish those values.
 
-### Public workspace update commands
+### Full application upgrade
 
-This release updates **API and web**. Execute only after approval, commit and push.
-There is no new release SHA until that review is complete. Use the existing server
+This procedure updates **API and web**, including persistent accounting when an
+approved release adds it. Execute only after approval, commit and push. Use the existing server
 checkout and inspect its running containers' Compose project labels and mounts
 first. The values below must come from that installation; never guess a new project
 or volume. Preserve all existing Compose overrides and interpolation settings.
-No activation flags or credential changes are needed. Legacy flags are ignored.
+Local workflows need no activation flag. Public AMD remains controlled by
+`DUBGUARD_PUBLIC_AMD_ENABLED`; do not enable it until quota tests pass. Preserve
+existing reviewer/provider credentials and accounting data.
 
 Run the following in Bash from the existing clean checkout. Define `dc` as the
 **same existing Compose command**, including `-p`, every `-f`/`--env-file`, and
@@ -302,7 +302,8 @@ review IDs/audio hashes, sign-off blocks and trusted Caddy address. In two separ
 browser contexts, complete a sample and a custom local review, preview/download
 the original, inspect evidence, export a temporary decision, and confirm isolation
 and deletion. Check real microphone permission/recording. No AMD request is needed.
-Both config responses must report public availability even with old false flags.
+Both config responses must report local public availability; AMD availability
+depends on its configuration, switch and remaining quota.
 Keep existing data/model/Caddy volumes and the backups; never use `down -v`.
 
 If validation fails, retain the same shell variables and roll back images:
@@ -321,88 +322,19 @@ separate data restore. If the running installation has a different mount path,
 bind mount or network configuration, adapt the inspected values using the full
 procedure below before stopping it. Do not substitute an empty volume.
 
-### Full application upgrade
+If a release changes network IPAM or Caddy's address, plan that migration separately
+after the backup. Verify the configured subnet is unused and trust only Caddy's
+specific address; never expose API port 8000. Keep the same volume mounts and
+Compose project. Bind-mounted deployments need an equivalent stopped-API backup
+of the actual host path before using this procedure. Never substitute an empty
+volume or restore over post-backup review writes without reconciling them.
 
-1. Identify the **existing** checkout, Compose project name, Compose override files,
-   actual API volume mounts, domain and environment-file path. Inspect container
-   labels/mount names only, not their environment. Record the old Git SHA and old
-   image IDs. Do not assume the project name is `dubguard`; changing it silently
-   selects new empty volumes. Check `docker network ls` / network IPAM for conflicts
-   with the new subnet and choose an unused subnet/address if needed.
-2. Set `RELEASE_REVISION` to the exact approved 40-character new SHA. In the existing
-   clean checkout, fetch and check out that revision detached. Verify
-   `test "$(git rev-parse HEAD)" = "$RELEASE_REVISION"`. Keep the old images tagged
-   for rollback. Build API/web images while the old containers continue serving.
-   Do not run cache-model setup or download a model for this update.
-3. No public activation setting is required. Preserve existing credentials. Use the
-   existing Compose project/config arguments for every command below. Define `dc`
-   as the operator's exact existing Compose invocation; preserve domain, model
-   revision, server-env path and any subnet interpolation values through sudo.
-   Run `dc config --quiet` and `dc build api web`. Builds do not update the server.
-4. Schedule a short write-maintenance interval. `dc stop api` waits up to the
-   configured graceful shutdown period (100 seconds); one API instance only.
-   Leave the web container and Caddy certificate volumes intact. With the API
-   stopped, back up the **entire actual review_data volume**, including SQLite,
-   journal/WAL files, original audio, review records and quick accounting. Use a
-   root-only backup directory and verify archive integrity and a restore copy
-   before allowing any migration. Also securely back up the server environment
-   and record the Caddy volume names. This is the consistent pre-migration backup.
-5. Example backup commands after determining the actual volume name and existing
-   stopped API image (replace the placeholders with inspected values):
-
-   ```bash
-   BACKUP_DIR="/var/backups/dubguard/$(date -u +%Y%m%dT%H%M%SZ)"
-   sudo install -d -m 700 "$BACKUP_DIR"
-   # OLD_API_IMAGE is the old local image ID. No image pull or live API is needed.
-   sudo docker run --rm --network none --user 0 --entrypoint python \
-     --mount "type=volume,src=$REVIEW_VOLUME,dst=/source,readonly" \
-     --mount "type=bind,src=$BACKUP_DIR,dst=/backup" "$OLD_API_IMAGE" -c \
-     'import tarfile; t=tarfile.open("/backup/review-data.tar.gz","w:gz"); t.add("/source",arcname="review-data"); t.close()'
-   sudo chmod 600 "$BACKUP_DIR/review-data.tar.gz"
-   sudo tar -tzf "$BACKUP_DIR/review-data.tar.gz" >/dev/null
-   sudo sha256sum "$BACKUP_DIR/review-data.tar.gz" | sudo tee "$BACKUP_DIR/review-data.sha256" >/dev/null
-   # Test extraction to a separate scratch directory; never extract over the
-   # active volume to test the backup.
-   sudo install -m 600 /etc/dubguard/server.env "$BACKUP_DIR/server.env"
-   ```
-
-6. The Compose network now gives Caddy a stable address. If the existing Compose
-   network must be recreated to apply IPAM, `dc down` **without `-v`**, after the
-   backup, removes containers/network only. This causes a brief planned outage;
-   it preserves named volumes and certificates. Then `dc up -d api web` recreates
-   exactly one API against the **same** volumes. If no network change is needed,
-   `dc up -d --no-deps --force-recreate api web` suffices. Never use
-   `docker compose down -v`, volume prune, or a new project name. There is no
-   zero-downtime guarantee on this single-instance deployment.
-7. Verify `/api/health`, `/api/ready`, HTTPS certificate/redirect, `/test`, `/login`,
-   `/review` authentication, static assets, Caddy headers/CSP, microphone permission,
-   policy/review history, audio hashes and current sign-off restrictions. Anonymous
-   GET of session/audio and DELETE must return 401. `/api/quick/config` must show
-   `public_local: true`; `/api/workspace/config` must show `enabled: true`.
-   Confirm one API process and persistent old review IDs.
-8. Make a short **real local recording** in the browser, preview/download it and
-   compare original bytes/format. Submit local verification only. Confirm expiry,
-   quotas, protected audio retrieval, refresh and deletion. Inspect AMD configuration readiness without submitting inference; do not send a
-   real AMD request without separate authorization.
-9. Set the verified Caddy IP `/32` trust entry before the update; without it all
-   visitors conservatively share Caddy's client bucket. Verify separate-client
-   accounting and spoofed forwarded-header rejection through HTTPS. Caddy
-   overwrites forwarded IP values; Uvicorn proxy-header rewriting is disabled.
-   Never expose port 8000. Both public flows are available automatically; no
-   post-deployment feature switch exists. Complete a custom local review and a
-   sample review, including download and temporary demo decisions.
-10. If validation fails, restore the retained old images/revision and
-    old Compose/network configuration. The accounting migration is additive;
-    preserve the current volume rather than automatically restoring over newer
-    review data. If database restoration is necessary, stop the API and reconcile
-    every post-backup review/audio write first. Test rollback on a copy. Never
-    delete a production volume as a rollback shortcut.
-
-The shared CPU demo is bounded, not a distributed denial-of-service protection
-service. Shared NAT users share client limits; global 20 active sessions, 30 hourly
-admissions, 2 jobs, 2 uploads, 60 seconds/10 MB per recording, 3 attempts/session,
-2 AMD attempts/session and 1 AMD demo call remain enforced. Do not scale API
-workers/replicas without replacing in-process locks with a shared admission system.
+The demo enforces 20 active sessions, 30 global hourly admissions, two processing
+jobs, two uploads (one per client), 60 seconds/10 MB per recording, three attempts
+per session, two AMD attempts per session and one concurrent public AMD call.
+Hourly/daily/client AMD budgets persist independently of session deletion.
+Shared NAT clients share a network bucket. Do not add API workers/replicas or
+overlap old/new instances against the same SQLite files.
 
 ## New installation only
 
@@ -433,7 +365,8 @@ sudo python3 deploy/create_env.py /etc/dubguard/server.env
 sudoedit /etc/dubguard/server.env
 ```
 
-The generator refuses to overwrite existing files and creates reviewer credentials. Retrieve/distribute the reviewer credential
+The generator refuses to overwrite existing files and creates reviewer credentials.
+Retrieve/distribute the reviewer credential
 privately. Add an AMD key only if paid inference is intended; never show secrets
 in command flags, URLs, screenshots or logs. Both public local workflows are
 available immediately. Configure the verified Caddy `/32` before opening access.

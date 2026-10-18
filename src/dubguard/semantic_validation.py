@@ -4,7 +4,7 @@ import json
 import re
 from typing import Any, Literal
 
-from pydantic import Field, ValidationError, model_validator
+from pydantic import Field, ValidationError
 
 from .schemas import (EvidenceSpan, Identifier, Model, SemanticFinding,
                       SemanticIssue, TranscriptSegment, VerificationRequest)

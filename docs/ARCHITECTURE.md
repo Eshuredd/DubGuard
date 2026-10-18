@@ -15,17 +15,44 @@
 | `audio.py`, `alignment.py`, `acoustic.py` | Bounded intake, CPU Whisper, provisional mapping and independent protected-term recheck |
 | `providers.py`, `semantic_validation.py`, `amd_audio.py` | AMD text transport, strict citations and separate optional MiMo probe |
 | `review.py` | Authenticated SQLite workflow, evidence versions, audit events and transactional sign-off |
-| `quick.py`, `quick_admission.py` | Scoped demo sessions, persistent quotas and admission before body parsing |
+| `quick.py`, `quick_admission.py`, `public_amd.py`, `workspace.py` | Scoped demo sessions, persistent quotas and admission before body parsing |
 | `evaluation.py`, `phase2_evaluation.py`, `audio_evaluation.py`, `data/` | Corpus, subsets and opt-in recorded-audio evaluation |
 
 Caddy serves the built SPA and routes `/api/*` to one private API process. Vite
 supplies that proxy during development. SQLite/audio, model cache and certificate
 state persist separately. Background jobs run in-process, not in a durable queue.
 
-Routes: `/test` for demonstration, `/login` for reviewers, `/review` for the
-dashboard, `/review/new` for creation, `/review/:id` for review and `/policies` for
-editing and explicit policy approval. Dashboard counts describe the loaded
-25-record page rather than a server-wide aggregate.
+## Public sessions and private reviewers
+
+Public navigation contains only `/test` (samples) and `/workspace` (custom
+references). `/operator/login` and `/operator` are private reviewer entry points;
+`/login` remains a compatibility route. Authenticated reviewers retain `/review`,
+`/review/new`, `/review/:id` and `/policies`. Dashboard counts cover its loaded
+25-record page, not a server-wide aggregate.
+
+Public sessions use random 256-bit capabilities stored as digests. Capabilities
+are isolated by sample/custom scope, expire after 30 minutes and cannot enumerate
+other sessions. Public changes never write organizational approval records.
+Shared limits include 20 active sessions, 30 global hourly admissions, three
+analyses/session, 10 MB/60-second recordings, two processing jobs and two admitted
+uploads (one per network client). Early admission bounds the body before multipart
+parsing; HMAC client attempt accounting survives session deletion and restarts.
+
+Custom references allow 12 instructions, 30 constraints and 12,000 characters
+including alternatives. Visitor corrections allow 50 segments/12,000 characters;
+notes allow 2,000 characters. Each temporary workspace allows 30 metadata changes
+and retains up to 20 demo activity descriptions. Optimistic revisions reject
+stale edits. Analysis admission rechecks the exact reference snapshot and version
+inside its SQLite transaction. Changed references or recordings invalidate prior
+acknowledgements. Corrections require a listening attestation and reason, validate
+audio hashes and timestamp bounds, preserve raw ASR and rerun local rules.
+Exported demo decisions carry no authenticated organizational authority.
+
+Operator login exchanges an independent reviewer credential for an expiring
+HttpOnly, SameSite=Strict cookie (Secure outside localhost); only its digest is
+stored. Cookie mutations check origin. Logout, expiry and reviewer-configuration
+rotation revoke it. The browser retains only a non-secret signed-in hint. Backend
+authorization remains independent of that hint and of public session capabilities.
 
 ## Script, policy and deterministic verification
 
@@ -168,3 +195,13 @@ history and invalidates old approval. Legacy unbound approvals are labeled
 history/export and `/review/audit-events` retain decisions, but SQLite is not
 tamper-proof and human attestation does not prove listener truthfulness.
 Quick Test cannot approve policies or recordings.
+
+## Frontend presentation
+
+`frontend/src/studio.css` is the single application stylesheet. The navy sidebar,
+teal controls, responsive mobile menu, reduced-motion rules and keyboard focus
+styles share one design system. Original-audio waveforms are decoded from actual
+source samples, with native playback fallback. Text comparisons highlight wording
+differences; those highlights are not policy verdicts or model confidence.
+Local deterministic and AMD advisory findings remain separately inspectable,
+including rejected-citation explanations and original source references.

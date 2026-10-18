@@ -17,12 +17,7 @@ import {
   jump,
   recordingFilename,
 } from "../components/Audio";
-import {
-  Badge,
-  Findings,
-  TranscriptView,
-  Coverage,
-} from "../components/Evidence";
+import { Findings, TranscriptView, Coverage } from "../components/Evidence";
 
 type View = Schema["WorkspaceView"];
 type Requirement = Policy["policy"]["constraints"][number];

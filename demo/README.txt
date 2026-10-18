@@ -5,6 +5,9 @@ demo/output/DubGuard_Hackathon_Demo_Final.mp4
 The corrected final uses this filename because Windows prevented replacement of the earlier MP4.
 Target composition: 215 seconds, 6,450 frames, 1920 x 1080, 30 FPS.
 Actual encoded properties and QA results: demo/output/verification.json.
+Select the final by the filename AND SHA-256 in that receipt, not by a similar
+MP4 filename. If the named file is missing, recover the verified render or rerender
+separately; an older video is not a verified substitute. Cleanup does not render.
 Complete timed narration: demo/output/Voiceover.txt.
 Sidecar captions: demo/output/DubGuard_Subtitles.srt; captions are also burned in.
 

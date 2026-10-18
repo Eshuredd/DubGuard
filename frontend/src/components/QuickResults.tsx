@@ -228,16 +228,16 @@ export function QuickResults({
           <h3>Listen, compare, then confirm.</h3>
           <p>
             Check highlighted words and any unclear spans against the recording.
-            Use Reviewer Workspace to save human corrections and review
-            decisions.
+            Create a Review to define your own reference and save temporary
+            evidence corrections and demo notes.
           </p>
         </div>
         <div className="actions">
           <a className="button secondary" href="#capture-panel">
             Record another take
           </a>
-          <Link to="/review" className="button">
-            Open Reviewer Workspace
+          <Link to="/workspace" className="button">
+            Create a Review
           </Link>
         </div>
       </div>

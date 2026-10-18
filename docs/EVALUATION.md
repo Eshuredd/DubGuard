@@ -11,8 +11,10 @@ not authenticated approvals or industrial experts. [profiles.json](../src/dubgua
 supplies policies; [phase2_sets.json](../src/dubguard/data/phase2_sets.json) defines
 the overlapping semantic, numeric/logical and uncertainty subsets.
 
-Committed results: [JSON](../reports/evaluation.json),
-[Markdown](../reports/evaluation.md), [subset report](../reports/phase2_sets.json).
+Committed results: [full JSON](../reports/evaluation.json) and
+[subset report](../reports/phase2_sets.json). The JSON retains all metrics,
+per-category findings and fingerprints; `evaluate` regenerates a Markdown summary
+in the selected output directory. The duplicate generated summary is not tracked.
 
 | Path | Critical recall | Critical precision | Acceptable → critical | Review-required decisions |
 |---|---:|---:|---:|---:|
@@ -129,8 +131,11 @@ weights, identical audio hashes/model/decoding, separate load/processing timings
 memory/utilization samples and independently checked transcript errors. No validated
 Quark-to-Whisper-to-CTranslate2 path was established; do not add execution claims.
 
-No human-adjudicated recordings, WER, protected-token speech accuracy or reviewer
-workload results are supplied. Follow [the recording protocol](RECORDING_GUIDE.md).
+Six original demo WAVs and their actual local ASR results are preserved in
+ignored `recorded-evaluation/` and `demo/private/`; see [demo provenance](../demo/README.txt).
+They are not independently adjudicated ground truth. No human-adjudicated WER,
+protected-token speech accuracy or reviewer workload result is supplied. Follow
+[the recording protocol](RECORDING_GUIDE.md).
 Missing secondary recognition means **not measured**, not zero disagreement.
 
 ## Tests and browser captures
@@ -168,8 +173,9 @@ backend, 21 frontend, 9 private/reviewer, 1 separately run public and 1 containe
 browser tests passing. [Verification manifest](../reports/phase6/verification.json)
 records that implementation session's file list/secret scan, not current Git or
 deployment status. Its original screenshot inventory and XML command are historical;
-redundant images/XML were removed after retaining the four
-[labeled captures](../README.md#guides-and-evidence) and aggregate results.
+the old implementation screenshots and XML are reproducible artifacts. Current
+[labeled screenshots](../README.md#public-workflows) replace the four stale UI
+captures; aggregate JSON receipts and all genuine inference reports are retained.
 Earlier JSON receipts retain container build IDs, environment/model hashes,
 restart tests and validation scope; their old public-unavailable status is historical.
 The later [public GET audit](../reports/phase6/public-baseline/audit.json) establishes
@@ -177,15 +183,18 @@ reachability at its recorded instant. Cleanup HEAD checks of `/test` and `/login
 also returned HTTP 200 on 18 October 2026; neither observation identifies deployment
 of the latest code or verifies API readiness/physical capture.
 
-`frontend/tests/capture.ts` still generates desktop/mobile captures in
-`reports/phase6/after/` (or `DUBGUARD_VISUAL_STAGE`), with axe and overflow checks in
-the default after stage. Tests write other artifacts under `frontend/test-results/`.
-Generated captures are ignored except the four retained examples. To create a
-comparison, capture the chosen baseline revision in an isolated checkout using
-`DUBGUARD_VISUAL_STAGE=before`, then the candidate with `after`. The optional local
-`scripts/phase6_visual_audit.py` uses Pillow to build contact sheets/crops once both
-complete capture sets exist. It never calls a service. Public audit tooling remains
-GET/HEAD-only; no production check is required to reproduce the local tests.
+`frontend/tests/capture.ts` generates desktop/mobile screenshots under ignored
+`reports/local/ux-refinement/` by default. Set `DUBGUARD_VISUAL_DIR` to another
+ignored output directory and `DUBGUARD_VISUAL_STAGE` to `before` or `after`.
+The `after` stage checks axe WCAG A/AA rules and horizontal overflow; these checks
+are not a full accessibility certification. [README screenshots](../README.md#public-workflows)
+retain two representative fixture captures in `docs/images/`. Tests also write
+disposable traces/downloads under ignored `frontend/test-results/`.
+
+The read-only `frontend/scripts/audit-public.mjs` writes new public GET/HEAD audit
+outputs to ignored `reports/local/public-audit/`, preserving the historical audit.
+It rejects mutating requests and submits no credentials. Running it contacts the
+public site; it is not required for local tests and cannot establish deployed SHA.
 
 For production-bundle Chrome, Compose validation, Caddy validation, real CPU smoke
 and recovery testing use [the isolated container protocol](../DEPLOYMENT.md#local-container-validation).

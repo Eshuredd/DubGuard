@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 from pydantic import Field
 
-from .alignment import AlignmentRun, apply_confirmed_alignment, propose_alignment
+from .alignment import apply_confirmed_alignment, propose_alignment
 from .audio import (AudioArtifact, AudioError, AudioStore, FasterWhisperProvider, AUDIO_MIME,
                     TranscriptionResult, transcribe_artifact)
 from .acoustic import TargetedRecheckResult, targeted_recheck
