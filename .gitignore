@@ -15,3 +15,54 @@ frontend/node_modules/
 frontend/playwright-report/
 frontend/test-results/
 frontend/*.tsbuildinfo
+
+# Local tool caches and test outputs.
+.venv-*/
+venv/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+*.log
+
+# Private runtime data outside the default data directory.
+*.env
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite-journal
+*.sqlite3-journal
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+/recordings/
+/models/
+/.cache/
+
+# Fresh evaluation runs and reproducible browser/JUnit artifacts.
+# JSON evidence, corpus fixtures, OpenAPI and generated API types stay versioned.
+/reports/local/
+/reports/audio_evaluation.json
+/reports/recorded_audio.json
+/reports/recorded_audio.md
+/reports-amd*/
+/reports-local/
+/reports/**/*.png
+/reports/**/*.jpg
+/reports/**/*.xml
+/junit*.xml
+/pytest*.xml
+!/reports/phase6/after/landing-desktop.png
+!/reports/phase6/after/local-evidence-desktop.png
+!/reports/phase6/after/amd-mocked-desktop.png
+!/reports/phase6/after/critical-signoff-mobile.png

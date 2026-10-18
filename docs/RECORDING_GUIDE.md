@@ -1,19 +1,21 @@
-# Physical microphone and real-speech checklist
+# Real-audio collection and evaluation
 
-Status: actual speech clips and independent listener ground truth are awaited.
-Run this manually in ordinary desktop Chrome with a physical microphone; automated
-Chrome fake-device tests and generated silence do not satisfy this checklist.
+No human-adjudicated recordings are supplied. The six-case
+[manifest template](../examples/phase2c-recordings.template.json) deliberately fails
+validation until original recordings, hashes, spoken ground truth and labels are
+supplied. Recording prompts are not ground truth. Never substitute TTS, generated
+silence or stub-ASR tests for speech measurements. Do not operate machinery.
 
 ## Capture protocol
 
 1. Open `/test` on the verified HTTPS origin, or localhost during local testing.
-   Enter only the private demo access code; never show it in the video. Check the
+   If private mode prompts, enter only the demo access code; never show it in the video. Check the
    selected physical input device and browser/site microphone permissions.
 2. Select **Local Verification**, choose the matching scenario, click Record
    narration, grant microphone permission, then Start recording. Record one
    consenting adult speaker in English, under 30 seconds, without operating machinery.
-3. Stop, preview, and confirm that the captured voice is actually audible. Save
-   the original file privately if needed for evaluation; Quick Test data expires.
+3. Stop, preview, and confirm that the captured voice is actually audible. Download
+   the original before submitting if needed for evaluation; Quick Test data expires.
    File upload accepts WAV, MP3, WebM/Opus and MP4/AAC. Do not rename a container
    extension to pretend it is WAV. Mono 16-kHz PCM WAV is the simplest recording format.
 4. Submit explicitly. Check the **Analyzed mode**, analyzed scenario, original
@@ -37,24 +39,27 @@ The `before-after` fixture is a protected polarity/template relation, not a proo
 of arbitrary multi-step temporal understanding. Full Review additionally supports
 explicit protected sequence constraints. No fixture outcome is a measured speech result.
 
-## AMD contribution inspection without another remote call
+## Independent adjudication
 
-Select AMD Semantic Review and inspect its requested-model and text-transfer
-disclosure. Consent is unchecked by default and resets after an analysis. Do not
-submit this mode without fresh explicit authorization for another paid request.
-Inspect the separately committed `reports/phase4/amd_smoke.json` as historical
-manual-text evidence: returned model, call ID, attempts, latency, usage and exact
-source citations. This is not the newly captured narration. Mocked browser-test
-screenshots must be labeled mocked. ROCm, Quark and MiMo were not executed.
+Prefer mono 16-kHz PCM WAV with short leading/trailing silence. Keep clips under
+30 seconds for any separately authorized optional MiMo probe. Preserve original
+bytes and consent privately. One independent listener transcribes actual speech
+before seeing ASR or the intended prompt; a second adjudicates disagreements.
+Record listener identities and notes. Keep `[unclear]` where words cannot be heard.
 
-If a later request is explicitly authorized, verify fresh consent, requested and
-returned model, actual status/attempts/latency, citation rejection, retained local
-findings and separate advisory AMD findings. Show failures as failures.
+Set original absolute paths and lowercase SHA-256, actual spoken_ground_truth,
+independently chosen labels and reviewed policy identities. Use `UNRESOLVED` for
+ambiguity. Timestamps must be measured paired spans or two nulls. Preserve
+development/held_out splits without tuning on held-out clips. Optional
+`human_corrected_transcript` uses source `manual` and complete coverage only after
+listening to the whole clip; retain spoken errors and uncertainty. Optional
+`confirmed_asr_alignment` uses IDs from actual ASR, never invented ones. Manifest
+metadata is not authenticated production evidence and evaluation never signs off.
 
 ## Private import commands (PowerShell, repository root)
 
 These commands never call AMD. Install the already pinned local dependencies and
-cache the pinned Whisper model using DEPLOYMENT.md if not done yet. Do not overwrite
+cache the pinned Whisper model using [DEPLOYMENT.md](../DEPLOYMENT.md) if not done yet. Do not overwrite
 an existing manifest or generate labels from ASR.
 
 ```powershell
@@ -110,3 +115,19 @@ save actual spoken-text evidence, review every prerequisite and explicitly sign 
 An actual wrong instruction requires a new recording/superseding workflow; an ASR
 correction cannot repair the speech. Retain private clips, manifests and reports
 outside Git, and publish only consented/redacted evidence.
+
+On Linux use `.venv/bin/python`, `mkdir -p`, `cp` and `sha256sum` for the same
+preflight/evaluation/report steps. Keep existing manifests intact. The evaluator
+uses an already cached model and never calls AMD or automatically downloads weights.
+Six clips do not establish statistical generalization or industrial accuracy.
+
+## Optional AMD inspection
+
+Inspect [the saved live response](../reports/phase4/amd_smoke.json) and
+[offline inspection](../reports/phase4/amd_smoke_inspection.json) as historical
+manual-text evidence, never as the newly recorded narration. Selecting AMD mode
+shows the requested model and text-transfer disclosure, with consent unchecked.
+Another request requires separate explicit authorization, the independent AMD
+code and fresh consent. Show actual status, latency, citations or honest failure
+and retained local findings. Mock screenshots must stay labeled mocked. No
+ROCm/Quark/MiMo execution has been measured. See [evaluation scope](EVALUATION.md).

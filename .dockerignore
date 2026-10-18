@@ -18,3 +18,19 @@ src/**/__pycache__/
 !deploy/Dockerfile.web
 !deploy/Caddyfile
 !deploy/cache_model.py
+
+# Keep credentials, runtime databases and caches out of allowed source trees too.
+**/.env
+**/.env.*
+**/*.env
+**/*.sqlite
+**/*.sqlite3
+**/*.sqlite*-wal
+**/*.sqlite*-shm
+**/*.sqlite*-journal
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/*.db-journal
+**/__pycache__/
+**/*.py[cod]
