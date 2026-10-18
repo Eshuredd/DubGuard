@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { audioBlob } from "../api";
+import type { Transcript } from "../api";
+import { AudioTransport } from "./AudioTransport";
 export const MIME_TYPES = [
   "audio/webm;codecs=opus",
   "audio/webm",
@@ -29,13 +31,16 @@ export function AudioPlayer({
   path,
   credential,
   audioRef,
+  segments,
 }: {
   path: string;
   credential?: string;
   audioRef: RefObject<HTMLAudioElement | null>;
+  segments?: Transcript["segments"];
 }) {
   const [blob, setBlob] = useState<Blob | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [retry, setRetry] = useState(0);
   const url = useObjectURL(blob);
   useEffect(() => {
     let alive = true;
@@ -51,18 +56,22 @@ export function AudioPlayer({
     return () => {
       alive = false;
     };
-  }, [path, credential]);
+  }, [path, credential, retry]);
   return (
     <div className="audio-player">
       {error ? (
-        <p role="alert">{error}</p>
-      ) : url ? (
-        <audio
-          ref={audioRef}
-          controls
-          src={url}
-          preload="metadata"
-          aria-label="Original recording"
+        <div>
+          <p role="alert">{error}</p>
+          <button className="secondary" onClick={() => setRetry((n) => n + 1)}>
+            Retry audio
+          </button>
+        </div>
+      ) : url && blob ? (
+        <AudioTransport
+          blob={blob}
+          url={url}
+          audioRef={audioRef}
+          segments={segments}
         />
       ) : (
         <p role="status">Loading private original audio…</p>
@@ -85,18 +94,21 @@ export function AudioInput({
   maxSeconds = 60,
   maxBytes = 10_000_000,
   scenarioName,
+  onCaptureActive,
 }: {
   file: File | null;
   onChange: (f: File | null) => void;
   maxSeconds?: number;
   maxBytes?: number;
   scenarioName?: string;
+  onCaptureActive?: (active: boolean) => void;
 }) {
   const [phase, setPhase] = useState<
       "idle" | "permission" | "ready" | "recording" | "stopping"
     >("idle"),
     [error, setError] = useState(""),
-    [elapsed, setElapsed] = useState(0);
+    [elapsed, setElapsed] = useState(0),
+    [level, setLevel] = useState<number | null>(null);
   const stream = useRef<MediaStream | null>(null),
     recorder = useRef<MediaRecorder | null>(null),
     chunks = useRef<Blob[]>([]),
@@ -105,6 +117,48 @@ export function AudioInput({
     timer = useRef<ReturnType<typeof setInterval> | null>(null),
     begin = useRef(0);
   const url = useObjectURL(file);
+  const previewAudio = useRef<HTMLAudioElement>(null);
+  useEffect(() => {
+    onCaptureActive?.(phase !== "idle");
+  }, [phase, onCaptureActive]);
+  useEffect(() => {
+    if (
+      (phase !== "ready" && phase !== "recording") ||
+      !stream.current ||
+      typeof AudioContext === "undefined"
+    ) {
+      setLevel(null);
+      return;
+    }
+    let context: AudioContext | undefined;
+    let meterTimer: ReturnType<typeof setInterval> | undefined;
+    try {
+      context = new AudioContext();
+      const source = context.createMediaStreamSource(stream.current);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      const samples = new Float32Array(analyser.fftSize);
+      void context.resume().catch(() => setLevel(null));
+      meterTimer = setInterval(() => {
+        if (context?.state !== "running") {
+          setLevel(null);
+          return;
+        }
+        analyser.getFloatTimeDomainData(samples);
+        const rms = Math.sqrt(
+          samples.reduce((sum, x) => sum + x * x, 0) / samples.length,
+        );
+        setLevel(Math.min(100, Math.round(rms * 400)));
+      }, 120);
+    } catch {
+      setLevel(null);
+    }
+    return () => {
+      clearInterval(meterTimer);
+      void context?.close().catch(() => {});
+    };
+  }, [phase]);
   function clearTimer() {
     if (timer.current) clearInterval(timer.current);
     timer.current = null;
@@ -262,7 +316,7 @@ export function AudioInput({
     onChange(f);
   }
   return (
-    <section className="capture" aria-label="Audio input">
+    <section className={"capture capture-" + phase} aria-label="Audio input">
       <div className="capture-title">
         <span
           className={phase === "recording" ? "mic live" : "mic"}
@@ -288,9 +342,46 @@ export function AudioInput({
           </p>
         </div>
       </div>
+      {(phase === "ready" || phase === "recording") && (
+        <div className="microphone-feedback">
+          <div className="section-heading">
+            <strong>
+              {phase === "recording" ? "Recording" : "Microphone connected"}
+            </strong>
+            <span className="recording-time" aria-label="Recording duration">
+              {Math.floor(elapsed / 60)
+                .toString()
+                .padStart(2, "0")}
+              :
+              {Math.floor(elapsed % 60)
+                .toString()
+                .padStart(2, "0")}{" "}
+              / {maxSeconds} s
+            </span>
+          </div>
+          {level !== null ? (
+            <>
+              <meter
+                min="0"
+                max="100"
+                value={level}
+                aria-label="Microphone input level"
+              />
+              <small>
+                Live input level · speak naturally, then listen to your preview.
+              </small>
+            </>
+          ) : (
+            <small>
+              Live input level unavailable. Listen to your preview to check the
+              sound.
+            </small>
+          )}
+        </div>
+      )}
       <div role="status" aria-live="polite">
         {phase === "recording"
-          ? `Recording · ${elapsed.toFixed(1)} s / ${maxSeconds} s`
+          ? "Recording in progress. Stop when you have finished speaking."
           : phase === "ready"
             ? "Microphone ready. Recording has not started."
             : phase === "permission"
@@ -345,21 +436,29 @@ export function AudioInput({
       )}
       {file && (
         <div className="preview">
+          <span className="eyebrow">READY TO PREVIEW & SAVE</span>
           <strong>{file.name}</strong>
-          <audio
-            aria-label="Recording preview"
-            controls
-            src={url || undefined}
-            onLoadedMetadata={(e) => {
+          <div
+            onLoadedMetadata={() => {
               if (
-                Number.isFinite(e.currentTarget.duration) &&
-                e.currentTarget.duration > maxSeconds + 0.5
+                previewAudio.current &&
+                Number.isFinite(previewAudio.current.duration) &&
+                previewAudio.current.duration > maxSeconds + 0.5
               ) {
                 cancel();
                 setError("Audio exceeds the duration limit.");
               }
             }}
-          />
+          >
+            {url && (
+              <AudioTransport
+                blob={file}
+                url={url}
+                audioRef={previewAudio}
+                label="Recording preview"
+              />
+            )}
+          </div>
           <div className="actions">
             <a
               className="button secondary"

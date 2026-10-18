@@ -1,32 +1,5 @@
 import type { Review, Transcript, Schema } from "../api";
-function Difference({
-  approved,
-  observed,
-}: {
-  approved: string;
-  observed: string;
-}) {
-  if (!approved || approved === observed) return <>{observed}</>;
-  let a = 0,
-    b = 0;
-  while (
-    a < Math.min(approved.length, observed.length) &&
-    approved[a] === observed[a]
-  )
-    a++;
-  while (
-    b < Math.min(approved.length - a, observed.length - a) &&
-    approved[approved.length - 1 - b] === observed[observed.length - 1 - b]
-  )
-    b++;
-  return (
-    <>
-      {observed.slice(0, a)}
-      <mark>{observed.slice(a, observed.length - b)}</mark>
-      {observed.slice(observed.length - b)}
-    </>
-  );
-}
+import { Difference } from "./TextComparison";
 export function EvidenceTimeline({
   transcript,
   onSeek,
@@ -89,6 +62,10 @@ export function Findings({
   onDecision,
   disabled = false,
   title = "Verification findings",
+  provisional = false,
+  idPrefix,
+  selectedIndex,
+  providerDetails = true,
 }: {
   result: Review;
   onSeek: (s: number | null | undefined) => void;
@@ -99,6 +76,10 @@ export function Findings({
   ) => void;
   disabled?: boolean;
   title?: string;
+  provisional?: boolean;
+  idPrefix?: string;
+  selectedIndex?: number;
+  providerDetails?: boolean;
 }) {
   return (
     <section>
@@ -108,7 +89,7 @@ export function Findings({
       </div>
       <p className="notice">{result.safety_notice}</p>
       <p className="finding-guidance">
-        {result.decision === "CRITICAL_DEVIATION"
+        {!provisional && result.decision === "CRITICAL_DEVIATION"
           ? "Critical deviation confirmed from human-verified evidence. A new recording is required."
           : result.decision === "PASS_CANDIDATE"
             ? "No confirmed policy violation from current evidence. Human review and sign-off prerequisites still apply."
@@ -119,11 +100,7 @@ export function Findings({
           Semantic provider: {result.semantic.provider} ·{" "}
           {result.semantic.model || "no model response"} ·{" "}
           {result.semantic.status} · {result.semantic.explanation}
-          {result.semantic.latency_ms != null &&
-            ` · ${(result.semantic.latency_ms / 1000).toFixed(2)} seconds`}
-          {` · ${result.semantic.attempts ?? 0} HTTP attempts`}
           {result.semantic.error_class && ` · ${result.semantic.error_class}`}
-          {result.semantic.call_id && ` · Call ${result.semantic.call_id}`}
         </p>
       )}
       {!result.findings.length && (
@@ -132,121 +109,168 @@ export function Findings({
           apply.
         </p>
       )}
-      {result.findings.map((f, i) => (
-        <article className={"finding " + f.status.toLowerCase()} key={i}>
-          <div className="section-heading">
-            <strong>
-              {f.rule_id.startsWith("ASR.SUSPECTED")
-                ? "Potential instruction mismatch"
-                : f.rule_id.startsWith("SEMANTIC")
-                  ? "Semantic advisory"
-                  : f.rule_id.startsWith("ACOUSTIC")
-                    ? "Acoustic evidence"
-                    : f.rule_id.replaceAll(".", " · ").replaceAll("_", " ")}
-            </strong>
-            <Badge value={f.status} />
-          </div>
-          <small>
-            Requirement {f.constraint_id || "evidence quality"} · {f.rule_id}
-          </small>
-          <div className="comparison">
-            <div>
-              <span>Approved</span>
-              {f.approved.map((e, j) => (
-                <p key={j}>{e.text}</p>
-              ))}
+      {result.semantic && providerDetails && (
+        <details>
+          <summary>Provider request details</summary>
+          <p>
+            {result.semantic.attempts ?? 0} HTTP attempts
+            {result.semantic.latency_ms != null &&
+              ` · ${(result.semantic.latency_ms / 1000).toFixed(2)} seconds`}
+            {result.semantic.call_id && ` · Call ${result.semantic.call_id}`}
+          </p>
+        </details>
+      )}
+      {result.findings
+        .map((f, i) => ({ f, i }))
+        .sort(
+          (a, b) =>
+            Number(a.f.status === "SATISFIED") -
+            Number(b.f.status === "SATISFIED"),
+        )
+        .map(({ f, i }) => (
+          <article
+            className={
+              "finding " +
+              f.status.toLowerCase() +
+              (selectedIndex === i ? " selected-finding" : "")
+            }
+            key={i}
+            id={idPrefix ? `${idPrefix}-${i}` : undefined}
+            tabIndex={idPrefix ? -1 : undefined}
+          >
+            <div className="section-heading">
+              <strong>
+                {f.rule_id.startsWith("ASR.SUSPECTED")
+                  ? "Potential instruction mismatch"
+                  : f.rule_id.startsWith("SEMANTIC")
+                    ? "Semantic advisory"
+                    : f.rule_id.startsWith("ACOUSTIC")
+                      ? "Acoustic evidence"
+                      : f.rule_id.replaceAll(".", " · ").replaceAll("_", " ")}
+              </strong>
+              <Badge value={f.status} />
             </div>
-            <div>
-              <span>Observed</span>
-              {f.observed.length ? (
-                f.observed.map((e, j) => (
-                  <p key={j}>
-                    <Difference
-                      approved={
-                        f.approved.find(
-                          (a) => a.instruction_id === e.instruction_id,
-                        )?.text || ""
-                      }
-                      observed={e.text}
-                    />
-                    {e.start_seconds != null && (
-                      <button
-                        type="button"
-                        className="text-button"
-                        onClick={() => onSeek(e.start_seconds)}
-                      >
-                        ▶ {e.start_seconds.toFixed(2)}–
-                        {e.end_seconds?.toFixed(2)} s
-                      </button>
-                    )}
-                  </p>
-                ))
-              ) : (
-                <p>No observed span supplied.</p>
-              )}
-            </div>
-          </div>
-          <p>{f.explanation}</p>
-          {!!(f.approved.length + f.observed.length) && (
-            <details className="source-references">
-              <summary>Source references & exact text spans</summary>
-              {[...f.approved, ...f.observed].map((e, j) => (
-                <p key={j}>
-                  <strong>
-                    {e.source === "approved"
-                      ? "Approved script"
+            {(provisional || f.rule_id.startsWith("ASR.SUSPECTED")) && (
+              <small>Provisional transcript evidence · listen to confirm</small>
+            )}
+            {!!(f.approved.length + f.observed.length) && (
+              <div className="comparison">
+                <div>
+                  <span>Approved</span>
+                  {f.approved.map((e, j) => (
+                    <p key={j}>
+                      <Difference
+                        approved={
+                          f.observed.find(
+                            (o) => o.instruction_id === e.instruction_id,
+                          )?.text || ""
+                        }
+                        observed={e.text}
+                      />
+                    </p>
+                  ))}
+                  {!f.approved.length && <p>No approved span supplied.</p>}
+                </div>
+                <div>
+                  <span>
+                    {provisional || f.rule_id.startsWith("ASR.SUSPECTED")
+                      ? "Recognized · provisional"
                       : "Observed evidence"}
-                  </strong>{" "}
-                  · {e.instruction_id || "unmapped instruction"}{" "}
-                  {e.segment_id && `· Segment ${e.segment_id}`} · characters{" "}
-                  {e.start_char}–{e.end_char}
-                  <br />
-                  <q>{e.text}</q>
+                  </span>
+                  {f.observed.length ? (
+                    f.observed.map((e, j) => (
+                      <p key={j}>
+                        <Difference
+                          approved={
+                            f.approved.find(
+                              (a) => a.instruction_id === e.instruction_id,
+                            )?.text || ""
+                          }
+                          observed={e.text}
+                        />
+                        {e.start_seconds != null && (
+                          <button
+                            type="button"
+                            className="text-button"
+                            onClick={() => onSeek(e.start_seconds)}
+                          >
+                            ▶ {e.start_seconds.toFixed(2)}–
+                            {e.end_seconds?.toFixed(2)} s
+                          </button>
+                        )}
+                      </p>
+                    ))
+                  ) : (
+                    <p>No observed span supplied.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            <p>{f.explanation}</p>
+            {
+              <details className="source-references">
+                <summary>Source references & exact text spans</summary>
+                <p>
+                  Requirement {f.constraint_id || "evidence quality"} ·{" "}
+                  {f.rule_id}
                 </p>
-              ))}
-            </details>
-          )}
-          {f.provider && (
-            <small>
-              {f.provider} · Call {f.model_call_id || "not supplied"}
-            </small>
-          )}
-          {onDecision && (
-            <div className="actions">
+                {[...f.approved, ...f.observed].map((e, j) => (
+                  <p key={j}>
+                    <strong>
+                      {e.source === "approved"
+                        ? "Approved script"
+                        : "Observed evidence"}
+                    </strong>{" "}
+                    · {e.instruction_id || "unmapped instruction"}{" "}
+                    {e.segment_id && `· Segment ${e.segment_id}`} · characters{" "}
+                    {e.start_char}–{e.end_char}
+                    <br />
+                    <q>{e.text}</q>
+                  </p>
+                ))}
+                {f.provider && (
+                  <p>
+                    {f.provider} · Call {f.model_call_id || "not supplied"}
+                  </p>
+                )}
+              </details>
+            }
+            {onDecision && (
+              <div className="actions">
+                <button
+                  className="secondary"
+                  disabled={disabled}
+                  onClick={() => onDecision(i, "CORRECTION_REQUIRED")}
+                >
+                  Request evidence correction
+                </button>
+                <button
+                  className="secondary"
+                  disabled={disabled}
+                  onClick={() => onDecision(i, "RERECORD_REQUIRED")}
+                >
+                  Request new recording
+                </button>
+                <button
+                  className="secondary"
+                  disabled={disabled}
+                  onClick={() => onDecision(i, "ESCALATED")}
+                >
+                  Escalate to reviewer
+                </button>
+              </div>
+            )}
+            {onAccept && f.status === "SATISFIED" && (
               <button
                 className="secondary"
                 disabled={disabled}
-                onClick={() => onDecision(i, "CORRECTION_REQUIRED")}
+                onClick={() => onAccept(i)}
               >
-                Request evidence correction
+                Mark check reviewed
               </button>
-              <button
-                className="secondary"
-                disabled={disabled}
-                onClick={() => onDecision(i, "RERECORD_REQUIRED")}
-              >
-                Request new recording
-              </button>
-              <button
-                className="secondary"
-                disabled={disabled}
-                onClick={() => onDecision(i, "ESCALATED")}
-              >
-                Escalate to reviewer
-              </button>
-            </div>
-          )}
-          {onAccept && f.status === "SATISFIED" && (
-            <button
-              className="secondary"
-              disabled={disabled}
-              onClick={() => onAccept(i)}
-            >
-              Mark check reviewed
-            </button>
-          )}
-        </article>
-      ))}
+            )}
+          </article>
+        ))}
     </section>
   );
 }

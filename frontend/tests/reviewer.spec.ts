@@ -99,13 +99,46 @@ test("real MediaRecorder on fake device → private Quick Test → refresh and d
     .getByRole("button", { name: "Start recording", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Recording");
+  await expect(
+    page.getByRole("meter", { name: "Microphone input level" }),
+  ).toBeVisible();
   await page.waitForTimeout(650);
   await capture(page, "microphone");
   await page
     .getByRole("button", { name: "Stop recording", exact: true })
     .click();
-  await expect(page.getByLabel("Recording preview")).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Preview transport", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Recording preview")).toHaveAttribute(
+    "src",
+    /^blob:/,
+  );
+  await expect(page.getByRole("meter")).toHaveCount(0);
   await expect(page.getByText("narration.webm")).toBeVisible();
+  const transport = page.getByRole("group", {
+    name: "Preview transport",
+    exact: true,
+  });
+  await transport.getByLabel("Playback speed").selectOption("1.25");
+  await expect(page.getByLabel("Recording preview")).toHaveJSProperty(
+    "playbackRate",
+    1.25,
+  );
+  await transport
+    .getByRole("button", { name: "Play audio", exact: true })
+    .click();
+  await expect(page.getByLabel("Recording preview")).toHaveJSProperty(
+    "paused",
+    false,
+  );
+  await transport
+    .getByRole("button", { name: "Pause audio", exact: true })
+    .click();
+  await expect(page.getByLabel("Recording preview")).toHaveJSProperty(
+    "paused",
+    true,
+  );
   await capture(page, "recording-preview");
   const original = await page
     .getByLabel("Recording preview")
@@ -126,8 +159,17 @@ test("real MediaRecorder on fake device → private Quick Test → refresh and d
     page.getByRole("heading", { name: "Verification findings" }),
   ).toBeVisible();
   await expect(
+    page.getByText("Recognized narration · provisional", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByText("Source evidence & audit details", { exact: true })
+    .click();
+  await expect(
     page.getByText("Raw ASR · unverified", { exact: true }),
   ).toBeVisible();
+  await page
+    .getByText("Source evidence & audit details", { exact: true })
+    .click();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Verification findings" }),
@@ -169,15 +211,21 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
   ).toBeDisabled();
   await page.getByLabel("I consent to sending script").check();
   await page.getByRole("button", { name: "Analyze recording" }).click();
+  await page.getByRole("button", { name: /^Inspect amd finding 1:/ }).click();
   await expect(
     page.getByRole("heading", { name: "AMD semantic findings" }),
   ).toBeVisible();
+  await page.getByText("AMD model & consent details", { exact: true }).click();
   await expect(
     page.getByText(/Returned model: playwright-mock-no-real-AMD/),
   ).toBeVisible();
   await expect(
     page.getByText(/Analyzed mode: AMD Semantic Review/),
   ).toBeVisible();
+  await page
+    .getByLabel("AMD Semantic Review result", { exact: true })
+    .getByText("Provider request details", { exact: true })
+    .click();
   await expect(page.getByText(/1 HTTP attempts/)).toBeVisible();
   await expect(
     page.getByText(/Mocked HTTP, not actual AMD inference/),
@@ -195,6 +243,7 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
     fullPage: true,
   });
   await page.reload();
+  await page.getByRole("button", { name: /^Inspect amd finding 1:/ }).click();
   await expect(
     page.getByRole("heading", { name: "AMD semantic findings" }),
   ).toBeVisible();
@@ -491,4 +540,129 @@ test("keyboard navigation reaches the demo and changes scenario without a pointe
     ),
   ).toBe(true);
   await page.getByRole("button", { name: "Delete session and audio" }).click();
+  await page.locator(".mobile-navigation > summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".mobile-navigation")).toHaveJSProperty(
+    "open",
+    true,
+  );
+  await page
+    .getByRole("navigation", { name: "Mobile workspace" })
+    .getByRole("link", { name: "Policies", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Reviewer access" }),
+  ).toBeVisible();
+  await expect(page.locator(".mobile-navigation")).toHaveJSProperty(
+    "open",
+    false,
+  );
+});
+
+test("recoverable connection errors, queue filters and narrow keyboard evidence disclosure", async ({
+  page,
+}) => {
+  await page.route("**/api/quick/config", (route) =>
+    route.fulfill({ status: 503, json: { detail: "Temporary test outage" } }),
+  );
+  await page.goto("/test");
+  await expect(page.getByRole("alert")).toContainText("Temporary test outage");
+  await page.unroute("**/api/quick/config");
+  await page.getByRole("button", { name: "Reload session status" }).click();
+  await page
+    .getByLabel("Demo access code")
+    .fill(process.env.DUBGUARD_E2E_DEMO_CODE!);
+  await page.getByRole("button", { name: "Start Quick Test" }).click();
+  await page.getByRole("button", { name: "15 versus 50", exact: true }).click();
+  await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
+    name: "synthetic.wav",
+    mimeType: "audio/wav",
+    buffer: wav(),
+  });
+  await page.route("**/api/quick/audio", (route) =>
+    route.fulfill({ status: 503 }),
+  );
+  await page.getByRole("button", { name: "Analyze recording" }).click();
+  await expect(page.getByRole("button", { name: "Retry audio" })).toBeVisible();
+  await page.unroute("**/api/quick/audio");
+  await page.getByRole("button", { name: "Retry audio" }).click();
+  await expect(
+    page.getByRole("group", { name: "Source audio transport", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".narration-comparison mark").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/Text differences are not confirmed spoken errors/),
+  ).toBeVisible();
+  const findingSelection = page
+    .getByRole("button", { name: /^Inspect local finding/ })
+    .last();
+  await findingSelection.click();
+  await expect(findingSelection).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#selected-evidence")).toBeFocused();
+  await page.getByLabel("Search narration lines").fill("Switch");
+  await expect(page.locator(".search-line")).toHaveCount(1);
+  await page.getByLabel("Search narration lines").fill("");
+  const source = page.getByText("Source evidence & audit details", {
+    exact: true,
+  });
+  await source.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByText("Raw ASR · unverified", { exact: true }),
+  ).toBeVisible();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+  }
+  await page.locator("#local-findings").scrollIntoViewIfNeeded();
+  expect(
+    await page
+      .locator(".original-player")
+      .evaluate((el) => getComputedStyle(el).position),
+  ).toBe("sticky");
+  await page.getByRole("button", { name: "Delete session and audio" }).click();
+  await login(page);
+  await page
+    .getByLabel("Search scripts on this page")
+    .fill("no-matching-script-fixture");
+  await expect(
+    page.getByText(/matching “no-matching-script-fixture”/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByLabel("Search scripts on this page")).toHaveValue("");
+  await page.route("**/api/review/workflows?*", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { detail: "Queue connection interrupted" },
+    }),
+  );
+  await page.reload();
+  await expect(page.getByRole("alert")).toContainText(
+    "Queue connection interrupted",
+  );
+  await expect(page.getByText("No reviews yet")).toHaveCount(0);
+  await page.unroute("**/api/review/workflows?*");
+  await page.getByRole("button", { name: "Retry loading reviews" }).click();
+  await expect(page.locator(".review-row").first()).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await expect(page.locator("#workspace-overview")).toBeVisible();
+  await page.getByRole("link", { name: "Review history", exact: true }).click();
+  await expect(page.getByLabel("Show reviews on this page")).toHaveValue(
+    "history",
+  );
 });

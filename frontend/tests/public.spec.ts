@@ -88,7 +88,7 @@ test("public local mode: no code, original upload download, local evidence and r
   await expect(
     page.getByRole("button", { name: "Analyze recording" }),
   ).toBeDisabled();
-  for (const width of [390, 768, 1440]) {
+  for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
       await page.evaluate(

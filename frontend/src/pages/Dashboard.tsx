@@ -10,6 +10,7 @@ import {
 } from "../api";
 import { Badge } from "../components/Evidence";
 import { AudioInput } from "../components/Audio";
+import { Icon } from "../components/Icon";
 export function Login() {
   const [value, setValue] = useState(""),
     [error, setError] = useState(""),
@@ -67,20 +68,42 @@ export function Login() {
   );
 }
 export function Dashboard() {
+  const location = useLocation();
   const [rows, setRows] = useState<Summary[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
+    [retry, setRetry] = useState(0),
+    [search, setSearch] = useState(""),
     [page, setPage] = useState(0),
-    [view, setView] = useState("all");
+    [view, setView] = useState(
+      new URLSearchParams(location.search).get("view") === "history"
+        ? "history"
+        : "all",
+    );
+  useEffect(() => {
+    setView(
+      new URLSearchParams(location.search).get("view") === "history"
+        ? "history"
+        : "all",
+    );
+    setPage(0);
+  }, [location.search]);
+  useEffect(() => {
+    if (!loading && location.hash === "#workspace-overview")
+      document.getElementById("workspace-overview")?.scrollIntoView();
+  }, [loading, location.hash]);
   const historical = (r: Summary) =>
     ["APPROVED", "REJECTED", "SUPERSEDED"].includes(r.workflow.state);
   const visible = rows.filter(
     (r) =>
-      view === "all" || (view === "history" ? historical(r) : !historical(r)),
+      (view === "all" ||
+        (view === "history" ? historical(r) : !historical(r))) &&
+      r.policy.script.id.toLowerCase().includes(search.toLowerCase().trim()),
   );
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setError("");
     request<Summary[]>("/review/workflows?limit=25&offset=" + page * 25)
       .then((r) => {
         if (active) setRows(r);
@@ -94,7 +117,7 @@ export function Dashboard() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, retry]);
   return (
     <>
       <header className="page-heading">
@@ -115,33 +138,54 @@ export function Dashboard() {
       {error && (
         <p className="error" role="alert">
           {error} <Link to="/login">Sign in again</Link>
+          <button
+            className="text-button"
+            onClick={() => setRetry((n) => n + 1)}
+          >
+            Retry loading reviews
+          </button>
         </p>
       )}
-      <div className="workspace-overview">
-        <div>
-          <span className="eyebrow">ON THIS PAGE</span>
-          <strong>{rows.filter((r) => !historical(r)).length}</strong>
-          <span>Current reviews</span>
+      {!loading && !error && (
+        <div
+          className="workspace-overview"
+          id="workspace-overview"
+          tabIndex={-1}
+        >
+          <div>
+            <span className="eyebrow">ON THIS PAGE</span>
+            <strong>{rows.filter((r) => !historical(r)).length}</strong>
+            <span>Current reviews</span>
+          </div>
+          <div>
+            <span className="eyebrow">EVIDENCE TO CONFIRM</span>
+            <strong>
+              {
+                rows.filter(
+                  (r) => !historical(r) && !r.workflow.evidence_record_id,
+                ).length
+              }
+            </strong>
+            <span>Awaiting human evidence</span>
+          </div>
+          <div>
+            <span className="eyebrow">HISTORY</span>
+            <strong>{rows.filter(historical).length}</strong>
+            <span>Completed or superseded</span>
+          </div>
         </div>
-        <div>
-          <span className="eyebrow">EVIDENCE TO CONFIRM</span>
-          <strong>
-            {
-              rows.filter(
-                (r) => !historical(r) && !r.workflow.evidence_record_id,
-              ).length
-            }
-          </strong>
-          <span>Awaiting human evidence</span>
-        </div>
-        <div>
-          <span className="eyebrow">HISTORY</span>
-          <strong>{rows.filter(historical).length}</strong>
-          <span>Completed or superseded</span>
-        </div>
-      </div>
+      )}
       <div className="list-heading">
         <h2>Review queue</h2>
+        <label>
+          Search scripts on this page
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Find a script…"
+          />
+        </label>
         <label>
           Show reviews on this page
           <select value={view} onChange={(e) => setView(e.target.value)}>
@@ -153,17 +197,35 @@ export function Dashboard() {
       </div>
       {loading ? (
         <p role="status">Loading reviews…</p>
-      ) : !rows.length ? (
+      ) : error ? null : !rows.length ? (
         <div className="panel">
           <h2>No reviews yet</h2>
           <p>Create a policy and add a recording to start.</p>
+          <Link className="button" to="/review/new">
+            Create your first review
+          </Link>
         </div>
       ) : (
         <div className="review-list">
+          <div className="queue-list-header" aria-hidden="true">
+            <span>RECORDING & POLICY</span>
+            <span>EVIDENCE READINESS</span>
+            <span>WORKFLOW STATE</span>
+            <span>NEXT ACTION</span>
+          </div>
           {!visible.length && (
             <p className="panel">
               No {view === "history" ? "historical" : "current"} reviews on this
-              page.
+              page{search && ` matching “${search}”`}.
+              <button
+                className="text-button"
+                onClick={() => {
+                  setSearch("");
+                  setView("all");
+                }}
+              >
+                Clear filters
+              </button>
             </p>
           )}
           {visible.map((r) => (
@@ -172,38 +234,77 @@ export function Dashboard() {
               key={r.workflow.id}
               to={"/review/" + r.workflow.id}
             >
-              <div>
-                <strong>{r.policy.script.id}</strong>
-                <p>
-                  Script rev {r.policy.script.revision} · Policy rev{" "}
-                  {r.policy.policy.revision}
-                </p>
-                <small>
-                  {r.audio.duration_seconds.toFixed(1)} s ·{" "}
-                  {r.audio.format.toUpperCase()} ·{" "}
-                  {new Date(r.workflow.created_at).toLocaleString()}
-                </small>
-                <div className="row-stages" aria-label="Evidence progress">
-                  <span>✓ Script approved</span>
-                  <span>
-                    {r.workflow.transcription_record_id ? "✓" : "○"}{" "}
-                    Transcription
-                  </span>
-                  <span>
-                    {r.workflow.evidence_record_id ? "✓" : "○"} Human evidence
-                  </span>
-                  <span>
-                    {r.workflow.verification_record_id ? "✓" : "○"} Verification
-                  </span>
+              <div className="queue-identity">
+                <span className="file-symbol">
+                  <Icon name="wave" size={22} />
+                </span>
+                <div>
+                  <strong>{r.policy.script.id}</strong>
+                  <p>
+                    Script {r.policy.script.revision} · Policy{" "}
+                    {r.policy.policy.revision}
+                  </p>
+                  <small>
+                    {r.audio.duration_seconds.toFixed(1)} s ·{" "}
+                    {r.audio.format.toUpperCase()} ·{" "}
+                    {new Date(r.workflow.created_at).toLocaleDateString()}
+                  </small>
                 </div>
               </div>
-              <Badge value={r.workflow.state} />
-              <span aria-hidden="true">→</span>
+              <div className="queue-readiness">
+                <span
+                  className={
+                    r.workflow.transcription_record_id ? "stage-done" : ""
+                  }
+                >
+                  {r.workflow.transcription_record_id ? "✓" : "○"} Transcription
+                </span>
+                <span
+                  className={r.workflow.evidence_record_id ? "stage-done" : ""}
+                >
+                  {r.workflow.evidence_record_id ? "✓" : "○"} Human evidence
+                </span>
+                <span
+                  className={
+                    r.workflow.verification_record_id ? "stage-done" : ""
+                  }
+                >
+                  {r.workflow.verification_record_id ? "✓" : "○"} Verification
+                </span>
+              </div>
+              <div className="queue-status">
+                <Badge value={r.workflow.state} />
+              </div>
+              <div className="queue-action">
+                <span>
+                  {historical(r)
+                    ? "View decision history"
+                    : r.workflow.state.endsWith("FAILED")
+                      ? "Inspect processing failure"
+                      : [
+                            "TRANSCRIBING",
+                            "VERIFYING",
+                            "ACOUSTIC_RECHECKING",
+                          ].includes(r.workflow.state)
+                        ? "Processing evidence"
+                        : !r.workflow.transcription_record_id
+                          ? "Transcribe source audio"
+                          : !r.workflow.evidence_record_id
+                            ? "Confirm spoken words"
+                            : !r.workflow.verification_record_id
+                              ? "Verify saved evidence"
+                              : "Review decision blockers"}
+                </span>
+                <Icon name="arrow" size={18} />
+              </div>
             </Link>
           ))}
         </div>
       )}
       <div className="actions">
+        <span className="pagination-label">
+          Page {page + 1} · Filters apply to these 25 review slots
+        </span>
         <button
           className="secondary"
           disabled={!page || loading}

@@ -88,6 +88,79 @@ parsing; local analysis stays available. No live AMD call is part of this runboo
 
 ## Upgrade the existing DigitalOcean installation
 
+### Frontend-only refinement release
+
+This UI change does not require an API restart, migration, credential change or
+model download. Use the narrower procedure below **only after the exact release
+commit is approved and pushed**, and after confirming the deployed API is compatible
+with the starting revision `3abb735db75261a4165d269a0d217054da7b4788`. If its deployed
+revision is unknown or backend/configuration changes are pending, stop and use the
+full upgrade procedure instead. No deployment was performed as part of refinement.
+
+In the existing server checkout, define `dc` as the operator's **existing exact**
+Compose invocation (same project name, files, overrides and interpolation env).
+Use the same Docker privilege context throughout. `RELEASE_REVISION` and
+`DEPLOYED_REVISION` below must be verified 40-character SHAs, not branch names.
+`DUBGUARD_ORIGIN` is the existing HTTPS origin, without a trailing slash.
+
+```bash
+# Set these from the approved release and the existing deployment record.
+: "${RELEASE_REVISION:?Set the approved pushed 40-character SHA}"
+: "${DEPLOYED_REVISION:?Set the verified currently deployed SHA}"
+: "${DUBGUARD_ORIGIN:?Set the existing HTTPS origin}"
+test -z "$(git status --porcelain)" || exit 1
+git fetch origin || exit 1
+test "$(git rev-parse "$RELEASE_REVISION^{commit}")" = "$RELEASE_REVISION" || exit 1
+# Any change here requires the full deployment procedure, not a web-only release.
+git diff --quiet "$DEPLOYED_REVISION" "$RELEASE_REVISION" -- \
+  src Dockerfile deploy requirements.txt requirements-audio.txt pyproject.toml \
+  frontend/openapi.json frontend/src/generated-api.ts || exit 1
+dc config --quiet || exit 1
+WEB_CONTAINER="$(dc ps -q web)"
+API_CONTAINER="$(dc ps -q api)"
+test -n "$WEB_CONTAINER" && test -n "$API_CONTAINER" || exit 1
+OLD_WEB_IMAGE="$(sudo docker inspect --format '{{.Image}}' "$WEB_CONTAINER")"
+WEB_IMAGE_TAG="$(sudo docker inspect --format '{{.Config.Image}}' "$WEB_CONTAINER")"
+test -n "$OLD_WEB_IMAGE" && test -n "$WEB_IMAGE_TAG" || exit 1
+sudo docker image tag "$OLD_WEB_IMAGE" dubguard-web-rollback:pre-ux-refinement || exit 1
+git checkout --detach "$RELEASE_REVISION" || exit 1
+test "$(git rev-parse HEAD)" = "$RELEASE_REVISION" || exit 1
+dc config --quiet || exit 1
+dc build web || exit 1
+# Brief web interruption; preserve API, review/audio/model and Caddy volumes.
+dc up -d --no-deps --no-build web || exit 1
+test "$(dc ps -q api)" = "$API_CONTAINER" || exit 1
+curl --fail --silent --show-error "$DUBGUARD_ORIGIN/api/health" >/dev/null || exit 1
+curl --fail --silent --show-error "$DUBGUARD_ORIGIN/test" >/dev/null || exit 1
+curl --fail --silent --show-error "$DUBGUARD_ORIGIN/login" >/dev/null || exit 1
+dc ps
+```
+
+Verify the served HTML references the new build's asset hashes, open desktop/mobile
+pages, and inspect an existing authorized review without submitting a decision.
+Do not submit AMD analyses or consume public-demo attempts as a deployment smoke
+test. HTTP 200 alone does not prove that the new frontend is served. Keep rollback
+values and the previous image until acceptance; do not prune images or volumes.
+
+If the web check fails, use the same saved `dc`, `OLD_WEB_IMAGE` and `WEB_IMAGE_TAG`:
+
+```bash
+sudo docker image tag "$OLD_WEB_IMAGE" "$WEB_IMAGE_TAG" || exit 1
+dc up -d --no-deps --no-build --force-recreate web || exit 1
+test "$(dc ps -q api)" = "$API_CONTAINER" || exit 1
+curl --fail --silent --show-error "$DUBGUARD_ORIGIN/api/health" >/dev/null
+curl --fail --silent --show-error "$DUBGUARD_ORIGIN/test" >/dev/null
+# Restore the checkout to its recorded previous revision after rollback acceptance.
+git checkout --detach "$DEPLOYED_REVISION"
+```
+
+Never run `down -v`, recreate the API, change the project name, or initialize
+secrets for a web-only update. The commands above preserve persisted audio and
+review history. They intentionally leave server-specific values to the operator;
+the local checkout cannot establish those values.
+
+### Full application upgrade
+
 1. Identify the **existing** checkout, Compose project name, Compose override files,
    actual API volume mounts, domain and environment-file path. Inspect container
    labels/mount names only, not their environment. Record the old Git SHA and old

@@ -1294,7 +1294,6 @@ audio {
   color: #265b40;
 }
 .sticky-audio {
-  position: static;
   box-shadow: none;
 }
 [id] {

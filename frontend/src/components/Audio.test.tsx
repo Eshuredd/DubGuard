@@ -56,6 +56,37 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+it("reads the real input level and releases its audio context when capture is cancelled", async () => {
+  const close = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      resume = vi.fn().mockResolvedValue(undefined);
+      close = close;
+      createMediaStreamSource() {
+        return { connect: vi.fn() };
+      }
+      createAnalyser() {
+        return {
+          fftSize: 256,
+          getFloatTimeDomainData: (samples: Float32Array) => samples.fill(0.1),
+        };
+      }
+    },
+  );
+  render(<Harness />);
+  fireEvent.click(screen.getByText("Record narration"));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("meter", { name: "Microphone input level" }),
+    ).toHaveAttribute("value", "40"),
+  );
+  fireEvent.click(screen.getByText("Cancel recording"));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(stopTrack).toHaveBeenCalled();
+  expect(screen.queryByRole("meter")).not.toBeInTheDocument();
+});
 it.each([
   ["audio/webm;codecs=opus", "capture.wav", "webm"],
   ["audio/mp4;codecs=mp4a.40.2", "capture.webm", "mp4"],

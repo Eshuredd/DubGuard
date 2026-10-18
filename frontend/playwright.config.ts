@@ -7,6 +7,8 @@ process.env.DUBGUARD_E2E_REVIEW_TOKEN ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_DEMO_CODE ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_AMD_CODE ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_DIR ||= mkdtempSync(join(tmpdir(), "dubguard-e2e-"));
+const apiPort = process.env.DUBGUARD_E2E_API_PORT || "8000";
+const webPort = process.env.DUBGUARD_E2E_WEB_PORT || "5173";
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
@@ -15,7 +17,7 @@ export default defineConfig({
   retries: 0,
   globalTeardown: "./tests/teardown.ts",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: `http://127.0.0.1:${webPort}`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -36,9 +38,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command:
-        "node ../scripts/python.mjs -m uvicorn e2e_server:app --app-dir ../tests --host 127.0.0.1 --port 8000",
-      url: "http://127.0.0.1:8000/health",
+      command: `node ../scripts/python.mjs -m uvicorn e2e_server:app --app-dir ../tests --host 127.0.0.1 --port ${apiPort}`,
+      url: `http://127.0.0.1:${apiPort}/health`,
       reuseExistingServer: false,
       env: {
         DUBGUARD_DATA_DIR: process.env.DUBGUARD_E2E_DIR,
@@ -56,8 +57,9 @@ export default defineConfig({
       },
     },
     {
-      command: "npm run dev -- --port 5173",
-      url: "http://127.0.0.1:5173",
+      command: `npm run dev -- --port ${webPort}`,
+      url: `http://127.0.0.1:${webPort}`,
+      env: { DUBGUARD_DEV_API_TARGET: `http://127.0.0.1:${apiPort}` },
       reuseExistingServer: false,
     },
   ],

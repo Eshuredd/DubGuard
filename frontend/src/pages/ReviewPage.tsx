@@ -8,6 +8,11 @@ import {
   type Transcript,
 } from "../api";
 import { AudioPlayer, jump } from "../components/Audio";
+import { TextComparison } from "../components/TextComparison";
+import {
+  EvidenceInspector,
+  type Selection,
+} from "../components/EvidenceInspector";
 import {
   Badge,
   Coverage,
@@ -211,7 +216,11 @@ export function ReviewPage() {
     [signAttest, setSignAttest] = useState(false),
     [resolveAttest, setResolveAttest] = useState(false),
     [dirty, setDirty] = useState(false),
-    [editorReset, setEditorReset] = useState(0);
+    [editorReset, setEditorReset] = useState(0),
+    [selectedFinding, setSelectedFinding] = useState<Selection>({
+      kind: "local",
+      index: 0,
+    });
   const audio = useRef<HTMLAudioElement>(null);
   const base = "/review/workflows/" + id;
   async function refresh() {
@@ -241,6 +250,7 @@ export function ReviewPage() {
   useEffect(() => {
     setSignAttest(false);
     setResolveAttest(false);
+    setSelectedFinding({ kind: "local", index: 0 });
   }, [
     data?.workflow.verification_record_id,
     data?.workflow.evidence_record_id,
@@ -312,6 +322,34 @@ export function ReviewPage() {
         ]),
       ]
     : [];
+  const localReview = run
+    ? {
+        ...run,
+        findings: run.findings.filter(
+          (f) => !f.rule_id.startsWith("SEMANTIC."),
+        ),
+      }
+    : null;
+  const amdReview = run?.findings.some((f) => f.rule_id.startsWith("SEMANTIC."))
+    ? {
+        ...run,
+        findings: run.findings.filter((f) => f.rule_id.startsWith("SEMANTIC.")),
+      }
+    : null;
+  const selectedKind = run?.findings[selectedFinding.index]?.rule_id.startsWith(
+    "SEMANTIC.",
+  )
+    ? "amd"
+    : "local";
+  const inspectorSelection: Selection = {
+    kind: selectedKind,
+    index: Math.max(
+      0,
+      (selectedKind === "amd" ? amdReview : localReview)?.findings.findIndex(
+        (f) => f === run?.findings[selectedFinding.index],
+      ) ?? 0,
+    ),
+  };
   return (
     <>
       <header className="page-heading">
@@ -382,18 +420,102 @@ export function ReviewPage() {
           dependencies; create a superseding review to retry failed processing.
         </p>
       )}
+      <section
+        className="next-action review-next"
+        aria-label="Next review action"
+      >
+        <div>
+          <span className="eyebrow">
+            {finalized.has(w.state) ? "REVIEW HISTORY" : "NEXT HUMAN ACTION"}
+          </span>
+          <h2>
+            {finalized.has(w.state)
+              ? "This review is finalized"
+              : pending.has(w.state)
+                ? "Processing evidence"
+                : w.state.endsWith("FAILED")
+                  ? "Processing needs attention"
+                  : dirty
+                    ? "Save your transcript corrections"
+                    : !data.transcription
+                      ? "Transcribe the original recording"
+                      : !data.verified_evidence
+                        ? "Listen and confirm the spoken words"
+                        : !run
+                          ? "Verify the saved evidence revision"
+                          : run.decision === "CRITICAL_DEVIATION"
+                            ? "A new recording is required"
+                            : !canApprove
+                              ? "Resolve the approval blockers"
+                              : "Make an explicit human decision"}
+          </h2>
+          <p>
+            {finalized.has(w.state)
+              ? "The decision and its exact evidence are preserved in history."
+              : pending.has(w.state)
+                ? "Results update automatically. No completion estimate is available."
+                : !data.verified_evidence
+                  ? "Approval is blocked until human evidence and verification prerequisites are met. Recognizer output alone does not establish what was spoken."
+                  : "Approval requires complete human evidence, resolved checks and a decision on this exact verification run."}
+          </p>
+        </div>
+        {!pending.has(w.state) && (
+          <a
+            className="button secondary"
+            href={
+              finalized.has(w.state)
+                ? "#audit"
+                : w.state.endsWith("FAILED")
+                  ? "#audit"
+                  : !data.transcription
+                    ? "#transcription"
+                    : dirty || !data.verified_evidence
+                      ? "#human-evidence"
+                      : !run
+                        ? "#run-verification"
+                        : "#signoff"
+            }
+          >
+            {finalized.has(w.state)
+              ? "View decision history"
+              : !data.transcription
+                ? "Review source"
+                : dirty || !data.verified_evidence
+                  ? "Confirm human evidence"
+                  : !run
+                    ? "Run verification"
+                    : "Review decision blockers"}
+          </a>
+        )}
+      </section>
       <nav className="review-stages" aria-label="Review stages">
-        <a href="#approved-script">
+        <a href="#approved-script" data-stage="approved">
           <b>01</b> Approved script
         </a>
-        <a href="#original-audio">
+        <a href="#original-audio" data-stage="available">
           <b>02</b> Original recording
         </a>
-        <a href="#transcription">
+        <a
+          href="#transcription"
+          data-stage={
+            w.confirmed_alignment_record_id
+              ? "mapped"
+              : data.transcription
+                ? "confirm mapping"
+                : "pending"
+          }
+        >
           <b>03</b> Transcription & alignment
         </a>
         {data.transcription ? (
-          <a href="#human-evidence">
+          <a
+            href="#human-evidence"
+            data-stage={
+              data.verified_evidence?.transcript.completeness === "complete"
+                ? "saved"
+                : "required"
+            }
+          >
             <b>04</b> Human confirmation
           </a>
         ) : (
@@ -402,7 +524,12 @@ export function ReviewPage() {
           </span>
         )}
         {run ? (
-          <a href="#verification">
+          <a
+            href="#verification"
+            data-stage={
+              run.decision === "PASS_CANDIDATE" ? "candidate" : "needs review"
+            }
+          >
             <b>05</b> Verification findings
           </a>
         ) : (
@@ -411,7 +538,10 @@ export function ReviewPage() {
           </span>
         )}
         {data.acoustic ? (
-          <a href="#acoustic">
+          <a
+            href="#acoustic"
+            data-stage={data.acoustic_resolution ? "resolved" : "inspect"}
+          >
             <b>06</b> Acoustic resolution
           </a>
         ) : (
@@ -420,7 +550,16 @@ export function ReviewPage() {
           </span>
         )}
         {run ? (
-          <a href="#signoff">
+          <a
+            href="#signoff"
+            data-stage={
+              finalized.has(w.state)
+                ? w.state.toLowerCase()
+                : canApprove
+                  ? "human decision"
+                  : "blocked"
+            }
+          >
             <b>07</b> Human sign-off
           </a>
         ) : (
@@ -428,57 +567,89 @@ export function ReviewPage() {
             <b>07</b> Human sign-off · waiting
           </span>
         )}
-        <a href="#audit">
+        <a href="#audit" data-stage="available">
           <b>08</b> Audit & export
         </a>
       </nav>
       <section className="panel sticky-audio" id="original-audio">
+        <div className="section-heading">
+          <strong>Original recording</strong>
+          <small>
+            {data.audio_artifact.duration_seconds.toFixed(2)} s ·{" "}
+            {data.audio_artifact.format.toUpperCase()}
+          </small>
+        </div>
         <AudioPlayer
+          segments={data.transcription?.transcript.segments}
           path={"/review/artifacts/" + w.audio_record_id + "/audio"}
           audioRef={audio}
         />
-        <small className="identity">
-          Original SHA-256 {data.audio_artifact.sha256} ·{" "}
-          {data.audio_artifact.duration_seconds.toFixed(2)} seconds ·{" "}
-          {data.audio_artifact.format}
-        </small>
+        <details className="audio-identity">
+          <summary>Audio identity & provenance</summary>
+          <small className="identity">
+            Original SHA-256 {data.audio_artifact.sha256} ·{" "}
+            {data.audio_artifact.duration_seconds.toFixed(2)} seconds ·{" "}
+            {data.audio_artifact.format}
+          </small>
+        </details>
       </section>
-      {data.transcription && (
-        <section className="panel">
-          <EvidenceTimeline
-            transcript={data.transcription.transcript}
-            onSeek={(s) => jump(audio.current, s)}
+      <div className="review-evidence-grid">
+        <section className="panel" id="approved-script">
+          <h2 id="transcription">Compare the narration</h2>
+          <TextComparison
+            approvedLines={data.approved_policy.script.instructions.map(
+              (i) => ({ id: i.id, text: i.text }),
+            )}
+            recognizedLines={
+              (
+                data.verified_evidence?.transcript ||
+                data.transcription?.transcript
+              )?.segments
+            }
+            onSeek={(seconds) => jump(audio.current, seconds)}
+            activeIds={
+              run?.findings[selectedFinding.index]?.instruction_ids || []
+            }
+            approved={data.approved_policy.script.instructions
+              .map((i) => i.text)
+              .join(" ")}
+            recognized={
+              (
+                data.verified_evidence?.transcript ||
+                data.transcription?.transcript
+              )?.segments
+                .map((s) => s.text)
+                .join(" ") || ""
+            }
+            verified={!!data.verified_evidence}
           />
-        </section>
-      )}
-      <div className="two-column">
-        <section className="panel">
-          <h2 id="approved-script">Approved script</h2>
-          <small>Approved by {data.approved_policy.policy.approved_by}</small>
-          {data.approved_policy.script.instructions.map((i) => (
-            <article className="script-step" key={i.id}>
-              <span className="eyebrow">{i.id}</span>
-              <blockquote>{i.text}</blockquote>
-              {i.approved_variants?.map((v, j) => (
-                <p key={j}>Permitted: {v.text}</p>
+          {data.transcription ? (
+            <>
+              <Coverage data={data.transcription.coverage} />
+              {data.transcription.uncertainty?.map((u, i) => (
+                <p className="notice" key={i}>
+                  {u}
+                </p>
               ))}
-            </article>
-          ))}
-          <h3>Protected requirements</h3>
-          {data.approved_policy.policy.constraints.map((c) => (
-            <p key={c.id}>
-              <strong>{c.id}</strong> · {c.kind}
-              {c.kind === "polarity"
-                ? ` · ${c.approved_phrase} / ${c.reversed_phrase}`
-                : c.kind === "sequence"
-                  ? ` · ${c.instruction_ids.join(" → ")}`
-                  : ""}
-            </p>
-          ))}
-        </section>
-        <section className="panel">
-          <h2 id="transcription">Raw ASR · unverified</h2>
-          {!data.transcription ? (
+              <details>
+                <summary>Raw ASR & timestamped source evidence</summary>
+                <h3>Raw ASR · unverified</h3>
+                <TranscriptView
+                  transcript={data.transcription.transcript}
+                  onSeek={(s) => jump(audio.current, s)}
+                />
+                <EvidenceTimeline
+                  transcript={data.transcription.transcript}
+                  onSeek={(s) => jump(audio.current, s)}
+                />
+                <small>
+                  {data.transcription.provider} · {data.transcription.model} ·{" "}
+                  {data.transcription.processing_seconds.toFixed(2)} seconds
+                  processing
+                </small>
+              </details>
+            </>
+          ) : (
             <>
               <p>
                 No transcription is available. Local ASR needs an installed,
@@ -497,196 +668,208 @@ export function ReviewPage() {
                 Transcribe original audio
               </button>
             </>
-          ) : (
-            <>
-              <Coverage data={data.transcription.coverage} />
-              <TranscriptView
-                transcript={data.transcription.transcript}
-                onSeek={(s) => jump(audio.current, s)}
-              />
-              <small>
-                {data.transcription.provider} · {data.transcription.model} ·{" "}
-                {data.transcription.processing_seconds.toFixed(2)} seconds
-                processing
-              </small>
-              {data.transcription.uncertainty?.map((u, i) => (
-                <p className="notice" key={i}>
-                  {u}
-                </p>
-              ))}
-            </>
           )}
+          <details>
+            <summary>Approved policy, requirements & permitted wording</summary>
+            <p>Approved by {data.approved_policy.policy.approved_by}</p>
+            {data.approved_policy.script.instructions.map((i) => (
+              <article key={i.id}>
+                <h3>{i.id}</h3>
+                <p>{i.text}</p>
+                {i.approved_variants?.map((v, j) => (
+                  <p key={j}>Permitted: {v.text}</p>
+                ))}
+              </article>
+            ))}
+            <h3>Protected requirements</h3>
+            {data.approved_policy.policy.constraints.map((c) => (
+              <p key={c.id}>
+                <strong>{c.id}</strong> · {c.kind}
+                {c.kind === "polarity"
+                  ? " · " + c.approved_phrase + " / " + c.reversed_phrase
+                  : c.kind === "sequence"
+                    ? " · " + c.instruction_ids.join(" → ")
+                    : ""}
+              </p>
+            ))}
+          </details>
         </section>
+        {data.transcription && (
+          <>
+            <section className="panel human-evidence-panel">
+              {dirty && (
+                <div className="notice" role="status">
+                  Unsaved transcript edits. Save and reverify before making a
+                  decision.{" "}
+                  <button
+                    className="text-button"
+                    onClick={() => {
+                      setDirty(false);
+                      setEditorReset((v) => v + 1);
+                    }}
+                  >
+                    Discard unsaved transcript edits
+                  </button>
+                </div>
+              )}
+              <div id="human-evidence" />
+              <TranscriptEditor
+                key={`${w.revision}-${editorReset}`}
+                data={data}
+                onDirty={() => {
+                  setDirty(true);
+                  setSignAttest(false);
+                }}
+                disabled={locked}
+                save={(body) =>
+                  action(
+                    "/transcript-evidence",
+                    body,
+                    "Human evidence saved. Run verification on this revision before making decisions.",
+                  )
+                }
+              />
+            </section>
+          </>
+        )}
       </div>
       {data.transcription && (
         <>
-          <section className="panel">
-            <h2>Alignment</h2>
-            <p>
-              Proposals help locate evidence. Confirming a mapping never
-              verifies the spoken words.
-            </p>
-            <button
-              className="secondary"
-              disabled={locked || dirty}
-              onClick={() => action("/alignments/propose")}
-            >
-              Propose alignment
-            </button>
-            {data.alignment && (
-              <div className="notice">
-                <p>
-                  Missing:{" "}
-                  {data.alignment.missing_instruction_ids.join(", ") ||
-                    "none proposed"}{" "}
-                  · Repeated:{" "}
-                  {data.alignment.repeated_instruction_ids.join(", ") ||
-                    "none proposed"}{" "}
-                  · Extra:{" "}
-                  {data.alignment.extra_segment_ids.join(", ") ||
-                    "none proposed"}
-                </p>
-                {data.alignment.proposals.map((p, i) => (
-                  <p key={i}>
-                    {p.segment_ids.join(", ")} →{" "}
-                    {p.instruction_ids.join(", ") || "unmatched"} · {p.status} ·{" "}
-                    {p.match_type}
-                  </p>
-                ))}
-              </div>
-            )}
-            {data.confirmed_alignment && (
-              <p className="notice">
-                Reviewer-confirmed raw-ASR mapping is saved. It does not clear
-                uncertainty.
+          <div className="review-tools-grid">
+            <section className="panel alignment-panel">
+              <h2>Alignment</h2>
+              <p>
+                Proposals help locate evidence. Confirming a mapping never
+                verifies the spoken words.
               </p>
-            )}
-            <fieldset disabled={locked || dirty}>
-              {data.transcription.transcript.segments.map((s) => (
-                <label key={s.id}>
-                  {s.id} · {s.text}
-                  <select
-                    aria-label={"Map " + s.id}
-                    value={mapping[s.id] ?? ""}
-                    onChange={(e) =>
-                      setMapping({ ...mapping, [s.id]: e.target.value })
-                    }
-                  >
-                    <option value="">Select mapping / leave unmapped</option>
-                    {data.approved_policy.script.instructions.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.id} · {i.text}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-              <label>
-                Review note / action reason
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Record why you are confirming, resolving, or deciding."
-                />
-              </label>
               <button
-                disabled={!reason.trim()}
-                onClick={() =>
-                  action("/alignments/confirm", {
-                    confirmations: Object.fromEntries(
-                      Object.entries(mapping).filter(([, v]) => v),
-                    ),
-                    reason,
-                  })
-                }
+                className="secondary"
+                disabled={locked || dirty}
+                onClick={() => action("/alignments/propose")}
               >
-                Confirm selected mappings
+                Propose alignment
               </button>
-            </fieldset>
-          </section>
-          <section className="panel">
-            {dirty && (
-              <div className="notice" role="status">
-                Unsaved transcript edits. Save and reverify before making a
-                decision.{" "}
+              {data.alignment && (
+                <div className="notice">
+                  <p>
+                    Missing:{" "}
+                    {data.alignment.missing_instruction_ids.join(", ") ||
+                      "none proposed"}{" "}
+                    · Repeated:{" "}
+                    {data.alignment.repeated_instruction_ids.join(", ") ||
+                      "none proposed"}{" "}
+                    · Extra:{" "}
+                    {data.alignment.extra_segment_ids.join(", ") ||
+                      "none proposed"}
+                  </p>
+                  {data.alignment.proposals.map((p, i) => (
+                    <p key={i}>
+                      {p.segment_ids.join(", ")} →{" "}
+                      {p.instruction_ids.join(", ") || "unmatched"} · {p.status}{" "}
+                      · {p.match_type}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {data.confirmed_alignment && (
+                <p className="notice">
+                  Reviewer-confirmed raw-ASR mapping is saved. It does not clear
+                  uncertainty.
+                </p>
+              )}
+              <fieldset disabled={locked || dirty}>
+                {data.transcription.transcript.segments.map((s) => (
+                  <label key={s.id}>
+                    {s.id} · {s.text}
+                    <select
+                      aria-label={"Map " + s.id}
+                      value={mapping[s.id] ?? ""}
+                      onChange={(e) =>
+                        setMapping({ ...mapping, [s.id]: e.target.value })
+                      }
+                    >
+                      <option value="">Select mapping / leave unmapped</option>
+                      {data.approved_policy.script.instructions.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.id} · {i.text}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+                <label>
+                  Review note / action reason
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Record why you are confirming, resolving, or deciding."
+                  />
+                </label>
                 <button
-                  className="text-button"
-                  onClick={() => {
-                    setDirty(false);
-                    setEditorReset((v) => v + 1);
-                  }}
+                  disabled={!reason.trim()}
+                  onClick={() =>
+                    action("/alignments/confirm", {
+                      confirmations: Object.fromEntries(
+                        Object.entries(mapping).filter(([, v]) => v),
+                      ),
+                      reason,
+                    })
+                  }
                 >
-                  Discard unsaved transcript edits
+                  Confirm selected mappings
+                </button>
+              </fieldset>
+            </section>
+            <section className="panel verification-controls">
+              <h2 id="run-verification">Run verification</h2>
+              <div className="actions">
+                <button
+                  disabled={locked || dirty}
+                  onClick={() =>
+                    action(
+                      "/verify",
+                      undefined,
+                      "Deterministic verification completed.",
+                    )
+                  }
+                >
+                  Verify with local rules
+                </button>
+                <button
+                  className="secondary"
+                  disabled={locked || dirty}
+                  onClick={() =>
+                    action(
+                      "/verify?mode=hybrid",
+                      undefined,
+                      "AMD semantic verification requested. Any unavailable or invalid evidence remains unresolved.",
+                    )
+                  }
+                >
+                  Run rules + AMD semantic check
+                </button>
+                <button
+                  className="secondary"
+                  disabled={locked || dirty || !w.confirmed_alignment_record_id}
+                  onClick={() =>
+                    action(
+                      "/acoustic-recheck",
+                      undefined,
+                      "Independent acoustic recheck requested.",
+                    )
+                  }
+                >
+                  Recheck protected audio
                 </button>
               </div>
-            )}
-            <div id="human-evidence" />
-            <TranscriptEditor
-              key={`${w.revision}-${editorReset}`}
-              data={data}
-              onDirty={() => {
-                setDirty(true);
-                setSignAttest(false);
-              }}
-              disabled={locked}
-              save={(body) =>
-                action(
-                  "/transcript-evidence",
-                  body,
-                  "Human evidence saved. Run verification on this revision before making decisions.",
-                )
-              }
-            />
-          </section>
-          <section className="panel">
-            <h2>Run verification</h2>
-            <div className="actions">
-              <button
-                disabled={locked || dirty}
-                onClick={() =>
-                  action(
-                    "/verify",
-                    undefined,
-                    "Deterministic verification completed.",
-                  )
-                }
-              >
-                Verify with local rules
-              </button>
-              <button
-                className="secondary"
-                disabled={locked || dirty}
-                onClick={() =>
-                  action(
-                    "/verify?mode=hybrid",
-                    undefined,
-                    "AMD semantic verification requested. Any unavailable or invalid evidence remains unresolved.",
-                  )
-                }
-              >
-                Run rules + AMD semantic check
-              </button>
-              <button
-                className="secondary"
-                disabled={locked || dirty || !w.confirmed_alignment_record_id}
-                onClick={() =>
-                  action(
-                    "/acoustic-recheck",
-                    undefined,
-                    "Independent acoustic recheck requested.",
-                  )
-                }
-              >
-                Recheck protected audio
-              </button>
-            </div>
-            <p>
-              AMD selection sends script, policy and transcript to the
-              configured DeepSeek provider. It cannot approve recordings.
-              Acoustic recheck requires a separate cached local model; no model
-              is downloaded automatically.
-            </p>
-          </section>
+              <p>
+                AMD selection sends script, policy and transcript to the
+                configured DeepSeek provider. It cannot approve recordings.
+                Acoustic recheck requires a separate cached local model; no
+                model is downloaded automatically.
+              </p>
+            </section>
+          </div>
           {data.acoustic && (
             <section className="panel">
               <h2 id="acoustic">Independent acoustic evidence</h2>
@@ -767,27 +950,67 @@ export function ReviewPage() {
             </section>
           )}
           {run && (
-            <section className="panel">
+            <section className="panel decision-panel">
               <div id="verification" />
-              <Findings
-                result={run}
-                onSeek={(s) => jump(audio.current, s)}
-                disabled={locked || dirty || !reason.trim()}
-                onDecision={(i, decision) =>
-                  action("/findings/" + i + "/decision", {
-                    verification_record_id: w.verification_record_id,
-                    decision,
-                    reason,
-                  })
-                }
-                onAccept={(i) =>
-                  action("/findings/" + i + "/decision", {
-                    verification_record_id: w.verification_record_id,
-                    decision: "ACCEPTED_AS_CORRECT",
-                    reason,
-                  })
-                }
-              />
+              <div className="review-findings-grid">
+                <div>
+                  <Findings
+                    result={run}
+                    idPrefix="review-finding"
+                    selectedIndex={selectedFinding.index}
+                    provisional={!data.verified_evidence}
+                    onSeek={(s) => jump(audio.current, s)}
+                    disabled={locked || dirty || !reason.trim()}
+                    onDecision={(i, decision) =>
+                      action("/findings/" + i + "/decision", {
+                        verification_record_id: w.verification_record_id,
+                        decision,
+                        reason,
+                      })
+                    }
+                    onAccept={(i) =>
+                      action("/findings/" + i + "/decision", {
+                        verification_record_id: w.verification_record_id,
+                        decision: "ACCEPTED_AS_CORRECT",
+                        reason,
+                      })
+                    }
+                  />
+                </div>
+                <EvidenceInspector
+                  local={localReview}
+                  semantic={amdReview}
+                  selected={inspectorSelection}
+                  onSelect={(selection) => {
+                    const group =
+                      selection.kind === "amd" ? amdReview : localReview;
+                    const originalIndex = run.findings.indexOf(
+                      group!.findings[selection.index],
+                    );
+                    setSelectedFinding({
+                      kind: selection.kind,
+                      index: originalIndex,
+                    });
+                    requestAnimationFrame(() => {
+                      const node = document.getElementById(
+                        "review-finding-" + originalIndex,
+                      );
+                      node?.focus({ preventScroll: true });
+                      node?.scrollIntoView({ block: "nearest" });
+                    });
+                  }}
+                >
+                  <label>
+                    Finding action reason
+                    <textarea
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="Explain your review decision…"
+                      disabled={locked || dirty}
+                    />
+                  </label>
+                </EvidenceInspector>
+              </div>
               <p>
                 {accepted} / {run.findings.length} checks explicitly reviewed
                 for this run.
@@ -886,7 +1109,7 @@ export function ReviewPage() {
           )}
         </>
       )}
-      <section className="panel">
+      <section className="panel audit-panel">
         <h2 id="audit">Audit & evidence history</h2>
         <p>History is preserved in SQLite; it is not tamper-proof.</p>
         {data.approvals.map((a, i) => (
