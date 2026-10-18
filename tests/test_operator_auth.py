@@ -11,7 +11,6 @@ from dubguard.quick import database
 def op(tmp_path, monkeypatch):
     monkeypatch.setenv('DUBGUARD_DATA_DIR', str(tmp_path))
     monkeypatch.setenv('DUBGUARD_REVIEW_TOKENS_JSON', json.dumps({'operator': 'operator-only-random-test-token-long'}))
-    monkeypatch.setenv('DUBGUARD_PUBLIC_WORKSPACE', 'true')
     monkeypatch.setenv('DUBGUARD_CLIENT_SESSIONS_PER_HOUR', '30')
     return TestClient(app)
 

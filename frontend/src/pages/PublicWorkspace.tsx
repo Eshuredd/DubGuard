@@ -39,7 +39,6 @@ export function PublicWorkspace() {
     () => sessionStorage.getItem("dubguard-custom") || "",
   );
   const [data, setData] = useState<View | null>(null);
-  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [title, setTitle] = useState("My narration review");
   const [steps, setSteps] = useState<Step[]>(initial);
   const [requirements, setRequirements] = useState<Requirement[]>(numeric);
@@ -70,11 +69,6 @@ export function PublicWorkspace() {
   const result =
     data?.workspace.evidence?.result || data?.analysis.verification;
 
-  useEffect(() => {
-    request<{ enabled: boolean }>("/workspace/config", {}, "")
-      .then((v) => setEnabled(v.enabled))
-      .catch((e) => setError(e.message));
-  }, []);
   useEffect(() => {
     if (!cap) return;
     let alive = true,
@@ -326,13 +320,6 @@ export function PublicWorkspace() {
           <a href="#custom-evidence">Inspect Evidence & Review</a>
         </li>
       </ol>
-      {enabled === false && (
-        <p className="notice" role="status">
-          Public custom reviews are currently disabled on this server. You can
-          explore the editor; saving and analysis become available when the
-          operator enables the feature. No reviewer token is needed.
-        </p>
-      )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -642,10 +629,7 @@ export function PublicWorkspace() {
             <button
               className="wide"
               disabled={
-                enabled !== true ||
-                !title.trim() ||
-                steps.some((s) => !s.text.trim()) ||
-                !dirty
+                !title.trim() || steps.some((s) => !s.text.trim()) || !dirty
               }
               onClick={saveReference}
             >
@@ -677,8 +661,7 @@ export function PublicWorkspace() {
               dirty ||
               !file ||
               processing ||
-              (data?.analysis.runs || 0) >= 3 ||
-              enabled !== true
+              (data?.analysis.runs || 0) >= 3
             }
             onClick={analyze}
           >

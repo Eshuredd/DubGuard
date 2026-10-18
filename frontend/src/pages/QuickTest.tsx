@@ -14,7 +14,6 @@ export function QuickTest() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]),
     [selected, setSelected] = useState("correct"),
     [file, setFile] = useState<File | null>(null),
-    [code, setCode] = useState(""),
     [credential, setCredential] = useState(
       () => sessionStorage.getItem("dubguard-demo") || "",
     ),
@@ -81,12 +80,11 @@ export function QuickTest() {
     try {
       const r = await request<{ token: string }>(
         "/quick/sessions",
-        { method: "POST", headers: { "X-Demo-Code": code } },
+        { method: "POST" },
         "",
       );
       sessionStorage.setItem("dubguard-demo", r.token);
       setCredential(r.token);
-      setCode("");
       requestAnimationFrame(() =>
         document.getElementById("demo-workflow")?.focus(),
       );
@@ -157,17 +155,11 @@ export function QuickTest() {
   ];
   const sessionEntry = (
     <section className="panel session-entry" id="quick-start">
-      <h2>
-        {config?.public_local
-          ? "Start a public local test"
-          : "Start a private test session"}
-      </h2>
+      <h2>Start a sample review</h2>
       <p>
-        {config?.public_local
-          ? "No shared code needed for local verification. Admission is limited to protect this shared CPU demo."
-          : "Ask the demo operator for an access code. Public local access is disabled on this server."}{" "}
-        Audio expires after 30 minutes; each session allows three attempts. Save
-        your original recording before submitting it.
+        Choose a scenario and verify your narration. Audio expires after 30
+        minutes; each review allows three analyses. Save your original recording
+        before submitting it.
       </p>
       <form
         onSubmit={(e) => {
@@ -175,19 +167,7 @@ export function QuickTest() {
           void open();
         }}
       >
-        {!config?.public_local && (
-          <label>
-            Demo access code
-            <input
-              type="password"
-              autoComplete="off"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              required
-            />
-          </label>
-        )}
-        <button disabled={busy || !config || (!config.public_local && !code)}>
+        <button disabled={busy}>
           {busy ? "Starting session…" : "Start Quick Test"}
         </button>
       </form>

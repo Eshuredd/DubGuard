@@ -75,9 +75,6 @@ def charge(address, kind):
 
 def preflight(headers, query, address, scope="sample"):
     identity = resolve_session(headers.get("authorization"), scope)
-    if scope == "custom":
-        from .workspace import require_enabled
-        require_enabled()
     # Authenticated upload attempts consume client budget even when AMD code,
     # consent or subsequent quotas reject them. No credential guessing loop.
     digest = charge(address, "upload")
@@ -132,8 +129,6 @@ class QuickAdmissionMiddleware:
                 digest = await run_in_threadpool(preflight, headers, query, address, "custom" if custom else "sample")
             elif metadata:
                 await run_in_threadpool(resolve_session, headers.get("authorization"), "custom")
-                from .workspace import require_enabled
-                require_enabled()
                 digest = await run_in_threadpool(charge, address, "edit")
             else:
                 digest = await run_in_threadpool(charge, address, "operator_login" if scope["path"] == "/operator/session" else "session")

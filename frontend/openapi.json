@@ -2874,18 +2874,6 @@
     "/quick/sessions": {
       "post": {
         "operationId": "create_session_quick_sessions_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-demo-code",
-            "required": false,
-            "schema": {
-              "default": "",
-              "title": "X-Demo-Code",
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "content": {
@@ -2894,16 +2882,6 @@
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "summary": "Create Session",

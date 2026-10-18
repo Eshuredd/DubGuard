@@ -51,8 +51,6 @@ def test_browser_format_limits(tmp_path):
 @pytest.fixture
 def quick(tmp_path,monkeypatch):
     monkeypatch.setenv('DUBGUARD_DATA_DIR',str(tmp_path))
-    monkeypatch.setenv('DUBGUARD_DEMO_ACCESS_CODE','test-only-demo-access-code-long')
-    monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO','false')
     # These tests isolate session/global quotas; Phase 6 exercises client defaults.
     monkeypatch.setenv('DUBGUARD_CLIENT_SESSIONS_PER_HOUR','30')
     monkeypatch.setenv('DUBGUARD_CLIENT_UPLOADS_PER_HOUR','90')
@@ -61,7 +59,7 @@ def quick(tmp_path,monkeypatch):
         def transcribe(self,path):return [ASRHypothesis(text='Switch the power on.',start_seconds=0,end_seconds=.3)]
     monkeypatch.setattr('dubguard.quick.transcribe_artifact',lambda store,artifact:transcribe_artifact(store,artifact,Stub()))
     client=TestClient(app)
-    created=client.post('/quick/sessions',headers={'X-Demo-Code':'test-only-demo-access-code-long'})
+    created=client.post('/quick/sessions')
     assert created.status_code==200
     return client,created.json(),tmp_path
 
@@ -83,7 +81,7 @@ def test_quick_actual_api_pipeline_is_advisory(quick):
     assert not (root/'quick'/session['id']).exists()
 
 
-def test_quick_quota_expiry_and_disabled(quick,monkeypatch):
+def test_quick_quota_expiry_and_public_admission(quick,monkeypatch):
     client,s,root=quick;h={'Authorization':'Bearer '+s['token']}
     for _ in range(3):
         assert client.post('/quick/analyze?scenario_id=correct',headers=h,files={'file':('a.wav',wav_bytes(),'audio/wav')}).status_code==200
@@ -91,8 +89,7 @@ def test_quick_quota_expiry_and_disabled(quick,monkeypatch):
     with database() as db:db.execute('UPDATE sessions SET expires=? WHERE id=?',(time.time()-1,s['id']))
     cleanup();assert not (root/'quick'/s['id']).exists()
     assert client.get('/quick/session',headers=h).status_code==401
-    monkeypatch.setenv('DUBGUARD_DEMO_ACCESS_CODE','')
-    assert client.post('/quick/sessions').status_code==503
+    assert client.post('/quick/sessions').status_code==200
 
 
 def test_quick_failure_and_server_restart(quick,monkeypatch):

@@ -1,6 +1,6 @@
 # Public custom reviews — local implementation handoff
 
-Starting revision: `8a471ce6496e57396b2739e1ea584b143c5e347f` (clean at start).
+Access-barrier removal starts from `8be42ec77be6e79d39728a4e753e91f2d415f013`.
 No commit, push, deployment, production data change or live AMD call was made.
 
 ## User journey and isolation
@@ -52,51 +52,60 @@ model provenance and exact citation checks. Audio is never sent to DeepSeek.
 
 ## Configuration and safe DigitalOcean update
 
-New settings: `DUBGUARD_PUBLIC_WORKSPACE=false` (disabled by default),
-`DUBGUARD_CLIENT_EDITS_PER_HOUR=60` (hard ceiling 120), and
-`DUBGUARD_OPERATOR_LOGINS_PER_HOUR=8` (ceiling 30). Operator login attempts have a
-separate client bucket. Existing public creation/upload budgets remain 4/6 hourly
-by default and are shared between sample/custom workspaces.
+Sample and custom local reviews are always public. There is no enable flag,
+shared demo code or configuration fetch required to start either workflow.
+Compatibility config endpoints report `public_local: true` and `enabled: true`.
+Existing legacy enable flags and sample codes have no effect and can be removed
+from server configuration during a separately approved maintenance change.
+This update does not edit existing credentials or `.env`.
 
-After explicit approval, use [the existing data-preserving runbook](DEPLOYMENT.md):
+`DUBGUARD_CLIENT_EDITS_PER_HOUR=60` (ceiling 120) and
+`DUBGUARD_OPERATOR_LOGINS_PER_HOUR=8` (ceiling 30) remain operational controls.
+Creation/upload budgets remain 4/6 hourly per client, shared across both flows.
+The AMD code is independent of reviewer credentials and the provider key; absent
+or invalid AMD configuration leaves local verification available.
 
-1. Approve, commit/push and pin the **new exact SHA**; none exists for these edits yet.
-   Preserve the existing Compose project name, paths, named volumes and certificates.
-2. Build while old containers serve. Keep the new flag false. Stop the single API
-   for a consistent full-volume SQLite/audio backup, verify a restore copy, and
-   retain old images/configuration. Never use `down -v` or run the new-install secret
-   generator against the existing server environment.
-3. Start one API instance against the same volumes. Validate additive migration
-   (`sessions.scope`, `sessions.custom`), preserved private review IDs/audio hashes,
-   operator cookie login/logout, sign-off restrictions and invalid public capabilities.
-   Check HTTPS, `/api/health`, `/api/ready`, `/test`, `/workspace`, `/operator`, Caddy
-   headers/body limits and trusted Caddy `/32`. Existing operators sign in again;
-   their configured server credentials do not change.
-4. After isolation/resource tests and a real browser recording check, explicitly
-   enable only `DUBGUARD_PUBLIC_WORKSPACE=true` in the private server env and recreate
-   the API. This flag is independent of Quick Test's private/public admission mode.
-   Verify independent custom sessions, limits, deletion and local-only analysis.
-   Do not change production AMD settings or run a real AMD request.
-5. Roll back by disabling the flag and restoring old images/configuration, preserving
-   volumes. Additive columns are compatible with old code. Stop writes and reconcile
-   any post-backup records before a necessary data restore; never overwrite newer
-   organizational evidence blindly. No schema downgrade or volume deletion is needed.
+Use [the full application upgrade runbook](DEPLOYMENT.md#full-application-upgrade)
+and [the exact update commands](DEPLOYMENT.md#public-workspace-update-commands)
+only after approval and pinning the new reviewed Git SHA. Build while the old
+release serves, stop the single API for a full SQLite/audio volume backup, verify
+a restore copy, then update API and web using the existing project and volumes.
+Never regenerate credentials, use `down -v`, or deploy a moving branch. Public
+availability begins on deployment; finish isolation/resource tests before release.
+Keep old image tags for rollback, preserving every post-backup review write.
 
 ## Verification and remaining limits
 
-Results and screenshots are under `reports/local/public-workspace/` (ignored local
-artifacts). Screenshots carry synthetic-audio/stub-ASR/mock-AMD labels; the separate
-container capture uses real CPU Whisper on generated silence. No speech accuracy
-or human ground-truth claim is made. Executed checks: **359 backend tests, 28 frontend
-unit tests, 13 main Chrome tests, 1 separately enabled public-sample Chrome test and
-2 production-container Chrome tests passed**. TypeScript, production builds,
-Compose/Caddy validation, pip dependency checks, npm audit (0 vulnerabilities),
-credential artifact checks and `git diff --check` passed. Captured desktop/mobile
-states had zero axe WCAG A/AA violations. `backend.xml` contains backend results.
+Current access-removal results and desktop/mobile browser captures are under
+`reports/local/public-access/` (ignored local artifacts). Development browser
+tests use explicitly labeled synthetic audio/stub ASR/mock AMD fixtures. The
+separate production-container test runs real CPU Whisper on generated silence.
+Executed checks: **363 backend tests, 28 Vitest tests, 15 development Chrome E2E
+tests and 2 production-container Chrome tests passed**. TypeScript typecheck,
+host/container production builds, pip dependency checks, npm audit (zero known
+vulnerabilities), generated API contracts and `git diff --check` passed. Captured
+desktop/mobile states passed axe WCAG A/AA checks with zero reported violations;
+this is not a full accessibility certification. Four configured secret values
+were checked against the production bundle; none were present. Deployment command
+blocks passed Bash syntax validation; they have not been executed on DigitalOcean.
+No speech-accuracy claim is made.
+
+Regression coverage includes missing/false/true legacy flags, code-free creation,
+unavailable/stale config responses, actual custom rules, original-byte downloads,
+corrections and demo exports, capability isolation/expiry, quotas, spoofed headers,
+private operator boundaries, critical sign-off blocks, and separately authorized
+AMD consent/citation/timeout behavior using mocks only.
+
+Inspected captures: [sample landing](reports/local/public-access/after/public-landing-desktop.png),
+[custom editor desktop](reports/local/public-access/after/custom-reference-desktop.png),
+[custom editor mobile](reports/local/public-access/after/custom-reference-mobile.png).
+The disabled-feature warning and code prompt are absent. The form remains usable
+at both sizes, with original audio and evidence downstream. Backend JUnit is
+`reports/local/public-access/backend.xml`. Local capture files are intentionally ignored.
 
 Physical microphones and Safari/iOS remain unverified. Anonymous attestations are
 untrusted demonstration evidence. The workspace is a temporary, single-instance,
 English/single-speaker demo, not persistent organizational collaboration. Custom
 AMD review is unavailable; the protected sample AMD flow remains available where
-configured. Shared NAT clients share limits. Public access remains off until the
-operator explicitly enables it after deployment validation.
+configured. Shared NAT clients share limits. Both public local workflows are always
+available within those limits. DigitalOcean remains unchanged until approval.

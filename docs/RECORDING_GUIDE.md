@@ -9,7 +9,7 @@ silence or stub-ASR tests for speech measurements. Do not operate machinery.
 ## Capture protocol
 
 1. Open `/test` on the verified HTTPS origin, or localhost during local testing.
-   If private mode prompts, enter only the demo access code; never show it in the video. Check the
+   No login or code is needed for local verification. Check the
    selected physical input device and browser/site microphone permissions.
 2. Select **Local Verification**, choose the matching scenario, click Record
    narration, grant microphone permission, then Start recording. Record one

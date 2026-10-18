@@ -134,7 +134,7 @@ print(json.dumps(result))
         report['checks']['real_cpu_transcription_and_signoff_block'] = True
         report['transcription'] = transcript
 
-        opened = client.post('/api/quick/sessions', headers={'X-Demo-Code': config['DUBGUARD_DEMO_ACCESS_CODE']})
+        opened = client.post('/api/quick/sessions')
         opened.raise_for_status()
         session = opened.json()
         demo_headers = {'Authorization': 'Bearer ' + session['token']}

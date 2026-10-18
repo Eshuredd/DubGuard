@@ -6,7 +6,6 @@ References are visitor declarations; evidence/decisions have no authenticated id
 from contextlib import contextmanager
 from hashlib import sha256
 import json
-import os
 import time
 from typing import Literal
 
@@ -21,15 +20,6 @@ from .audio import AudioStore
 
 router = APIRouter(prefix="/workspace", tags=["temporary custom review"])
 NOTICE = "Temporary demo only. Visitor reference and evidence are not organizational approval, authenticated reviewer identity or release authorization. Data expires after 30 minutes."
-
-
-def enabled():
-    return os.getenv("DUBGUARD_PUBLIC_WORKSPACE", "false").lower() == "true"
-
-
-def require_enabled():
-    if not enabled():
-        raise HTTPException(503, "Public custom reviews are currently disabled; no sign-in is required when enabled by the operator")
 
 
 def session(authorization: str | None = Header(default=None)):
@@ -102,7 +92,6 @@ def read_state(row):
 
 @contextmanager
 def edit(identity, expected):
-    require_enabled()
     with quick.database() as db:
         row = db.execute("SELECT * FROM sessions WHERE id=? AND scope='custom' AND expires>?", (identity, time.time())).fetchone()
         if not row:
@@ -135,12 +124,11 @@ def active_analysis(document, row):
 
 @router.get("/config")
 def config():
-    return {"enabled": enabled(), "amd_available": False, "notice": NOTICE}
+    return {"enabled": True, "amd_available": False, "notice": NOTICE}
 
 
 @router.post("/sessions")
 def create():
-    require_enabled()
     created = quick.new_session("custom")
     with quick.database() as db:
         db.execute("UPDATE sessions SET custom=? WHERE id=?", (WorkspaceState().model_dump_json(), created["id"]))
@@ -178,7 +166,6 @@ def save_reference(payload: ReferenceInput, identity: str = Depends(session)):
 @router.post("/analyze")
 async def analyze(tasks: BackgroundTasks, expected_revision: int, file: UploadFile = File(...),
                   mode: Literal["local"] = "local", identity: str = Depends(session)):
-    require_enabled()
     current = view(identity).workspace
     if not current.reference:
         raise HTTPException(409, "Save your reference script first")

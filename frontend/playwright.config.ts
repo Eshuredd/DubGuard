@@ -4,7 +4,6 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 process.env.DUBGUARD_E2E_REVIEW_TOKEN ||= randomBytes(32).toString("hex");
-process.env.DUBGUARD_E2E_DEMO_CODE ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_AMD_CODE ||= randomBytes(32).toString("hex");
 process.env.DUBGUARD_E2E_DIR ||= mkdtempSync(join(tmpdir(), "dubguard-e2e-"));
 const apiPort = process.env.DUBGUARD_E2E_API_PORT || "8000";
@@ -46,13 +45,9 @@ export default defineConfig({
         DUBGUARD_REVIEW_TOKENS_JSON: JSON.stringify({
           "e2e-reviewer": process.env.DUBGUARD_E2E_REVIEW_TOKEN,
         }),
-        DUBGUARD_DEMO_ACCESS_CODE: process.env.DUBGUARD_E2E_DEMO_CODE,
-        DUBGUARD_PUBLIC_WORKSPACE: "true",
         DUBGUARD_CLIENT_EDITS_PER_HOUR: "120",
         DUBGUARD_OPERATOR_LOGINS_PER_HOUR: "30",
         DUBGUARD_AMD_DEMO_ACCESS_CODE: process.env.DUBGUARD_E2E_AMD_CODE,
-        DUBGUARD_PUBLIC_LOCAL_DEMO:
-          process.env.DUBGUARD_E2E_PUBLIC === "true" ? "true" : "false",
         DUBGUARD_CLIENT_SESSIONS_PER_HOUR: "30",
         DUBGUARD_CLIENT_UPLOADS_PER_HOUR: "90",
         DUBGUARD_SEMANTIC_PROVIDER: "disabled",

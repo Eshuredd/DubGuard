@@ -9,14 +9,10 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('path', type=Path)
 args = parser.parse_args()
 reviewer = secrets.token_urlsafe(32)
-demo = secrets.token_urlsafe(32)
 amd_demo = secrets.token_urlsafe(32)
 config = '\n'.join([
     '# Private server configuration. Do not copy into frontend or commit.',
     'DUBGUARD_REVIEW_TOKENS_JSON=' + json.dumps({'reviewer': reviewer}, separators=(',', ':')),
-    'DUBGUARD_DEMO_ACCESS_CODE=' + demo,
-    'DUBGUARD_PUBLIC_LOCAL_DEMO=false',
-    'DUBGUARD_PUBLIC_WORKSPACE=false',
     'DUBGUARD_CLIENT_EDITS_PER_HOUR=60',
     'DUBGUARD_OPERATOR_LOGINS_PER_HOUR=8',
     'DUBGUARD_AMD_DEMO_ACCESS_CODE=' + amd_demo,
@@ -38,4 +34,4 @@ config = '\n'.join([
 descriptor = os.open(args.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 with os.fdopen(descriptor, 'w', encoding='utf-8') as output:
     output.write(config)
-print('Created private server configuration. Add the API key and retrieve access codes using your private editor. No secrets printed.')
+print('Created private server configuration. Local public reviews are ready. Configure optional AMD and private reviewer credentials using your private editor. No secrets printed.')

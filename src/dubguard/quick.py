@@ -96,10 +96,6 @@ def get_scenarios():
     return scenarios()
 
 
-def public_local_enabled() -> bool:
-    return os.getenv("DUBGUARD_PUBLIC_LOCAL_DEMO", "false").lower() == "true"
-
-
 def amd_demo_available() -> bool:
     # Configuration inspection only. Never construct a transport or perform discovery.
     from .providers import _load_project_env
@@ -111,7 +107,7 @@ def amd_demo_available() -> bool:
         if not isinstance(reviewers, dict):
             return False
         endpoint = urlsplit(os.getenv("AMD_TOKEN_FACTORY_ENDPOINT", ""))
-        return bool(len(code) >= 24 and code != os.getenv("DUBGUARD_DEMO_ACCESS_CODE")
+        return bool(len(code) >= 24
                     and code != os.getenv("AMD_TOKEN_FACTORY_API_KEY")
                     and code not in reviewers.values()
                     and os.getenv("AMD_TOKEN_FACTORY_API_KEY")
@@ -133,16 +129,11 @@ def authorize_amd(code: str, consent: bool):
 
 @router.get("/config", response_model=QuickConfig)
 def demo_config():
-    return {"public_local": public_local_enabled(), "amd_available": amd_demo_available()}
+    return {"public_local": True, "amd_available": amd_demo_available()}
 
 
 @router.post("/sessions")
-def create_session(x_demo_code: str = Header(default="")):
-    expected = os.getenv("DUBGUARD_DEMO_ACCESS_CODE", "")
-    if not public_local_enabled() and len(expected) < 24:
-        raise HTTPException(503, "Quick Test is disabled; operator must configure a demo access code")
-    if not public_local_enabled() and not hmac.compare_digest(expected.encode(), x_demo_code.encode()):
-        raise HTTPException(401, "Valid demo access code required")
+def create_session():
     return new_session("sample")
 
 

@@ -19,8 +19,8 @@ HTTP 200 on 17 October 2026 at 18:17 UTC. Read-only HEAD checks of `/test` and
 route reachability, not the running revision, API readiness or microphone behavior.
 The latest repository changes must not be assumed deployed.
 
-1. Open Quick Test. Enter the operator's private demo code if prompted; optional
-   public local access depends on server configuration.
+1. Open **Try a Sample** or **Create a Review**. Both are immediately usable
+   without a login, access code or activation setting.
 2. Choose a demonstration scenario and **Local Verification**. Record or upload
    a short clip, preview it, and save the original before submitting if needed.
 3. Analyze and inspect playback, recognized words, coverage and findings. Raw ASR
@@ -87,9 +87,8 @@ Copy [.env.example](.env.example) to a private, ignored `.env` and configure:
 - `DUBGUARD_WHISPER_MODEL`: absolute path to that cached model directory.
 - `DUBGUARD_DATA_DIR`: private writable directory for SQLite and original audio.
 - `DUBGUARD_REVIEW_TOKENS_JSON`: `{"reviewer-id":"unique-random-secret"}`.
-- `DUBGUARD_DEMO_ACCESS_CODE`: a different random secret of at least 24 characters.
 
-Keep public local mode disabled for private development. AMD settings are optional;
+Sample and custom local reviews are always public. AMD settings are optional;
 leave the API key blank for local-only use. Never reuse secrets or put server keys
 in Vite configuration. See [complete configuration](DEPLOYMENT.md#configuration).
 
@@ -102,8 +101,8 @@ npm --prefix frontend run dev
 
 Open [localhost Quick Test](http://127.0.0.1:5173/test) or
 [Create a Review](http://127.0.0.1:5173/workspace). The custom workspace opens
-without login. Enable `DUBGUARD_PUBLIC_WORKSPACE=true` only after validating its
-isolation and limits; its safe default is false. Private operational reviews use
+without login or server activation. Local verification works without AMD keys.
+Private operational reviews use
 `/operator`. See [configuration and upgrade notes](PUBLIC_WORKSPACE.md).
 Vite proxies `/api` to
 FastAPI; the [local API schema](http://127.0.0.1:8000/docs) describes request bodies.

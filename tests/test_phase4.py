@@ -119,7 +119,7 @@ def test_amd_quotas_survive_new_client_and_bound_global_jobs(amd):
     assert len(calls) == 2
     assert submit(c, s['token']).status_code == 200  # local third run retained
     assert len(calls) == 2
-    other = c.post('/quick/sessions', headers={'X-Demo-Code': 'test-only-demo-access-code-long'}).json()
+    other = c.post('/quick/sessions').json()
     with database() as db:
         db.execute("UPDATE sessions SET state='PROCESSING',payload=? WHERE id=?", (json.dumps({'mode': 'amd'}), s['id']))
     assert submit(c, other['token'], mode='amd', consent=True).status_code == 429

@@ -140,18 +140,16 @@ Missing secondary recognition means **not measured**, not zero disagreement.
 npm --prefix frontend test
 npm --prefix frontend run typecheck
 npm --prefix frontend run build
-npm --prefix frontend run test:e2e -- --grep-invert "public local mode"
+npm --prefix frontend run test:e2e
 .venv/bin/python -m pip check
 npm --prefix frontend audit
 git diff --check
 ```
 
-Run the public E2E separately in PowerShell:
+The full suite includes public sample and custom reviews. To run only the sample:
 
 ```powershell
-$env:DUBGUARD_E2E_PUBLIC = 'true'
 npm --prefix frontend run test:e2e -- tests/public.spec.ts
-Remove-Item Env:DUBGUARD_E2E_PUBLIC
 ```
 
 E2E requires installed desktop Google Chrome and free ports 8000/5173. It creates

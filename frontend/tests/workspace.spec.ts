@@ -35,6 +35,39 @@ async function save(page: import("@playwright/test").Page) {
   );
 }
 
+test("public editors do not depend on activation configuration", async ({
+  page,
+}) => {
+  await page.route("**/api/workspace/config", (route) =>
+    route.fulfill({ status: 503, body: "Configuration unavailable" }),
+  );
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Reviewer token", { exact: true })).toHaveCount(
+    0,
+  );
+  await page
+    .getByRole("button", { name: "Save reference & demo policy" })
+    .click();
+  await expect(page.getByLabel("Workspace update")).toContainText(
+    "Reference saved",
+  );
+  await page.getByRole("button", { name: "Delete temporary review" }).click();
+
+  // A stale config response must not restore the removed sample-code gate.
+  await page.route("**/api/quick/config", (route) =>
+    route.fulfill({ json: { public_local: false, amd_available: false } }),
+  );
+  await page.goto("/test");
+  await expect(
+    page.getByLabel("Demo access code", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Start Quick Test" }).click();
+  await expect(
+    page.getByRole("button", { name: "15 versus 50", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Delete session and audio" }).click();
+});
+
 test("no-login custom review: script, upload, actual local rules, visitor correction, demo decision and export", async ({
   page,
 }) => {

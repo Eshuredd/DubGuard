@@ -17,9 +17,9 @@ approved exact committed/pushed revision; never deploy a moving `main` reference
 ## Configuration
 
 For the new no-login custom flow see [Public Workspace](PUBLIC_WORKSPACE.md).
-Keep `DUBGUARD_PUBLIC_WORKSPACE=false` until the reviewed release is approved,
-backed up and validated. Its independent flag enables only temporary `/workspace`
-sessions, never private reviewer APIs. Operator UI credentials are now exchanged
+Both `/test` and `/workspace` always allow temporary local reviews without an
+access code or activation setting. This release changes public availability as
+soon as deployed; finish local security tests and the backup before updating. Operator UI credentials are now exchanged
 for expiring HttpOnly cookies; operators sign in again after this update.
 
 Private API configuration belongs in the existing `/etc/dubguard/server.env`,
@@ -49,10 +49,8 @@ full evidence/transport boundaries. Never use a Vite variable for server keys.
 
 | Variable | Safe default / purpose |
 |---|---|
-| `DUBGUARD_PUBLIC_LOCAL_DEMO` | `false`; private demo code still required. Only literal `true` enables public local admission. |
-| `DUBGUARD_DEMO_ACCESS_CODE` | Existing independent private-session code, at least 24 characters; retained for private mode. |
-| `DUBGUARD_AMD_DEMO_ACCESS_CODE` | Empty disables AMD demo access. New independent random secret, at least 24 characters, distinct from every reviewer token, private demo code and provider key. |
-| `DUBGUARD_CLIENT_SESSIONS_PER_HOUR` | `4` session-creation attempts per client; bounded to 1–30. Failed/private-code attempts count. |
+| `DUBGUARD_AMD_DEMO_ACCESS_CODE` | Empty disables AMD demo access. New independent random secret, at least 24 characters, distinct from every reviewer token and provider key. |
+| `DUBGUARD_CLIENT_SESSIONS_PER_HOUR` | `4` session-creation attempts per client; bounded to 1–30. Failed attempts count. |
 | `DUBGUARD_CLIENT_UPLOADS_PER_HOUR` | `6` admitted upload attempts per client; bounded to 1–90. Failed decodes and abandoned uploads count. |
 | `DUBGUARD_TRUSTED_PROXIES` | Empty: ignore forwarded IPs. Set only Caddy's verified static IP `/32` (default Compose address `172.30.71.2/32`). Never trust all addresses. |
 | `DUBGUARD_PROXY_SUBNET` | Compose interpolation variable; default `172.30.71.0/24`. Check for network conflicts first. |
@@ -165,6 +163,120 @@ secrets for a web-only update. The commands above preserve persisted audio and
 review history. They intentionally leave server-specific values to the operator;
 the local checkout cannot establish those values.
 
+### Public workspace update commands
+
+This release updates **API and web**. Execute only after approval, commit and push.
+There is no new release SHA until that review is complete. Use the existing server
+checkout and inspect its running containers' Compose project labels and mounts
+first. The values below must come from that installation; never guess a new project
+or volume. Preserve all existing Compose overrides and interpolation settings.
+No activation flags or credential changes are needed. Legacy flags are ignored.
+
+Run the following in Bash from the existing clean checkout. Define `dc` as the
+**same existing Compose command**, including `-p`, every `-f`/`--env-file`, and
+the existing Docker privilege context. For a standard installation its form is
+`dc() { sudo --preserve-env=DUBGUARD_DOMAIN,DUBGUARD_SERVER_ENV,DUBGUARD_WHISPER_REVISION,DUBGUARD_PROXY_SUBNET,DUBGUARD_CADDY_IP,DUBGUARD_API_IP docker compose -p "$PROJECT" -f deploy/compose.yaml "$@"; }`.
+Use that form only after confirming it matches the running installation. Do not
+print expanded Compose environment configuration or regenerate `server.env`.
+
+```bash
+set -euo pipefail
+# Set from the approved release and inspected deployment, not a moving branch.
+: "${RELEASE_REVISION:?Set the approved pushed 40-character Git SHA}"
+: "${PROJECT:?Set the existing Compose project name}"
+: "${SERVER_ENV:?Set the existing private server.env absolute path}"
+export DUBGUARD_SERVER_ENV="$SERVER_ENV"
+ORIGIN='https://134-209-145-248.sslip.io'
+declare -F dc >/dev/null
+test -z "$(git status --porcelain)"
+dc config --quiet
+API_ID="$(dc ps -q api)"
+WEB_ID="$(dc ps -q web)"
+test -n "$API_ID" && test -n "$WEB_ID"
+test "$(sudo docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$API_ID")" = "$PROJECT"
+OLD_REVISION="$(git rev-parse HEAD)"
+OLD_API_IMAGE="$(sudo docker inspect -f '{{.Image}}' "$API_ID")"
+OLD_WEB_IMAGE="$(sudo docker inspect -f '{{.Image}}' "$WEB_ID")"
+API_IMAGE_TAG="$(sudo docker inspect -f '{{.Config.Image}}' "$API_ID")"
+WEB_IMAGE_TAG="$(sudo docker inspect -f '{{.Config.Image}}' "$WEB_ID")"
+REVIEW_VOLUME="$(sudo docker inspect -f '{{range .Mounts}}{{if eq .Destination "/home/dubguard/data"}}{{if eq .Type "volume"}}{{.Name}}{{end}}{{end}}{{end}}' "$API_ID")"
+test -n "$REVIEW_VOLUME"  # Stop here if this installation uses a bind mount.
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+sudo docker image tag "$OLD_API_IMAGE" "dubguard-api-rollback:$STAMP"
+sudo docker image tag "$OLD_WEB_IMAGE" "dubguard-web-rollback:$STAMP"
+
+git fetch origin
+test "$(git rev-parse "$RELEASE_REVISION^{commit}")" = "$RELEASE_REVISION"
+git checkout --detach "$RELEASE_REVISION"
+test "$(git rev-parse HEAD)" = "$RELEASE_REVISION"
+dc config --quiet
+dc build api web                  # Old application still serves during build.
+
+dc stop api                      # Begin short maintenance; one API only.
+BACKUP_DIR="/var/backups/dubguard/$STAMP"
+sudo install -d -m 700 "$BACKUP_DIR" "$BACKUP_DIR/restore-check"
+sudo install -m 600 "$SERVER_ENV" "$BACKUP_DIR/server.env"
+sudo docker inspect -f '{{range .Mounts}}{{println .Type .Name .Destination}}{{end}}' "$WEB_ID" \
+  | sudo tee "$BACKUP_DIR/web-mounts.txt" >/dev/null
+sudo docker run --rm --network none --user 0 --entrypoint python \
+  --mount "type=volume,src=$REVIEW_VOLUME,dst=/source,readonly" \
+  --mount "type=bind,src=$BACKUP_DIR,dst=/backup" "$OLD_API_IMAGE" -c \
+  'import tarfile; t=tarfile.open("/backup/review-data.tar.gz","w:gz"); t.add("/source",arcname="review-data"); t.close()'
+sudo chmod 600 "$BACKUP_DIR/review-data.tar.gz"
+sudo tar -tzf "$BACKUP_DIR/review-data.tar.gz" >/dev/null
+sudo sha256sum "$BACKUP_DIR/review-data.tar.gz" \
+  | sudo tee "$BACKUP_DIR/review-data.sha256" >/dev/null
+sudo tar -xzf "$BACKUP_DIR/review-data.tar.gz" -C "$BACKUP_DIR/restore-check"
+# Verify every restored SQLite DB on the scratch copy; never migrate the original backup.
+sudo docker run --rm --network none --user 0 --entrypoint python \
+  --mount "type=bind,src=$BACKUP_DIR/restore-check,dst=/check" "$OLD_API_IMAGE" -c \
+  'from pathlib import Path; import sqlite3; files=[p for p in Path("/check").rglob("*") if p.is_file() and p.suffix in (".db",".sqlite",".sqlite3")]; assert files, "No SQLite backup found"; checks=[sqlite3.connect(str(p)).execute("PRAGMA integrity_check").fetchone()[0] for p in files]; assert all(v=="ok" for v in checks), checks; print("Restored SQLite integrity checks passed")'
+
+# Existing network and named volumes are retained, including both Caddy volumes.
+dc up -d --no-deps --no-build --force-recreate api web
+test "$(dc ps -q api | wc -l)" -eq 1
+NEW_API_ID="$(dc ps -q api)"
+test "$(sudo docker inspect -f '{{range .Mounts}}{{if eq .Destination "/home/dubguard/data"}}{{.Name}}{{end}}{{end}}' "$NEW_API_ID")" = "$REVIEW_VOLUME"
+for attempt in $(seq 1 60); do
+  if curl --fail --silent --show-error "$ORIGIN/api/ready" >/dev/null; then break; fi
+  sleep 2
+done
+curl --fail --silent --show-error "$ORIGIN/api/health"
+curl --fail --silent --show-error "$ORIGIN/api/ready"
+curl --fail --silent --show-error "$ORIGIN/test" >/dev/null
+curl --fail --silent --show-error "$ORIGIN/workspace" >/dev/null
+curl --fail --silent --show-error "$ORIGIN/api/quick/config"
+curl --fail --silent --show-error "$ORIGIN/api/workspace/config"
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$ORIGIN/api/workspace/session")" = 401
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$ORIGIN/api/workspace/audio")" = 401
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$ORIGIN/api/review/workflows")" = 401
+dc ps
+```
+
+Before acceptance, confirm the deployed asset hashes, HTTPS, preserved private
+review IDs/audio hashes, sign-off blocks and trusted Caddy address. In two separate
+browser contexts, complete a sample and a custom local review, preview/download
+the original, inspect evidence, export a temporary decision, and confirm isolation
+and deletion. Check real microphone permission/recording. No AMD request is needed.
+Both config responses must report public availability even with old false flags.
+Keep existing data/model/Caddy volumes and the backups; never use `down -v`.
+
+If validation fails, retain the same shell variables and roll back images:
+
+```bash
+dc stop api
+sudo docker image tag "$OLD_API_IMAGE" "$API_IMAGE_TAG"
+sudo docker image tag "$OLD_WEB_IMAGE" "$WEB_IMAGE_TAG"
+git checkout --detach "$OLD_REVISION"
+dc up -d --no-deps --no-build --force-recreate api web
+curl --fail --silent --show-error "$ORIGIN/api/ready"
+```
+
+Roll back with the current volume; reconcile any post-backup writes before any
+separate data restore. If the running installation has a different mount path,
+bind mount or network configuration, adapt the inspected values using the full
+procedure below before stopping it. Do not substitute an empty volume.
+
 ### Full application upgrade
 
 1. Identify the **existing** checkout, Compose project name, Compose override files,
@@ -178,7 +290,7 @@ the local checkout cannot establish those values.
    `test "$(git rev-parse HEAD)" = "$RELEASE_REVISION"`. Keep the old images tagged
    for rollback. Build API/web images while the old containers continue serving.
    Do not run cache-model setup or download a model for this update.
-3. Keep `DUBGUARD_PUBLIC_LOCAL_DEMO=false`. Add the new settings privately. Use the
+3. No public activation setting is required. Preserve existing credentials. Use the
    existing Compose project/config arguments for every command below. Define `dc`
    as the operator's exact existing Compose invocation; preserve domain, model
    revision, server-env path and any subnet interpolation values through sudo.
@@ -222,20 +334,20 @@ the local checkout cannot establish those values.
    `/review` authentication, static assets, Caddy headers/CSP, microphone permission,
    policy/review history, audio hashes and current sign-off restrictions. Anonymous
    GET of session/audio and DELETE must return 401. `/api/quick/config` must show
-   public access false. Confirm one API process and persistent old review IDs.
+   `public_local: true`; `/api/workspace/config` must show `enabled: true`.
+   Confirm one API process and persistent old review IDs.
 8. Make a short **real local recording** in the browser, preview/download it and
    compare original bytes/format. Submit local verification only. Confirm expiry,
    quotas, protected audio retrieval, refresh and deletion. Test that AMD is
    restricted without its separate code; do not authorize/send a real AMD request.
-9. Only after the [local security/resource tests](docs/EVALUATION.md#tests-and-browser-captures) and these
-   deployment checks pass may the operator explicitly enable
-   `DUBGUARD_PUBLIC_LOCAL_DEMO=true`. Set the verified Caddy IP `/32` trust entry
-   first; with no trusted proxy all visitors conservatively share Caddy's client
-   bucket. Recreate **only the API** using the same volumes; test separate-client
-   rate accounting and spoofed X-Forwarded-For rejection through HTTPS. The Caddy
-   proxy overwrites incoming forwarded IP values; Uvicorn proxy-header rewriting
-   is disabled. Do not expose API port 8000.
-10. If validation fails, turn public mode off and restore old image versions and
+9. Set the verified Caddy IP `/32` trust entry before the update; without it all
+   visitors conservatively share Caddy's client bucket. Verify separate-client
+   accounting and spoofed forwarded-header rejection through HTTPS. Caddy
+   overwrites forwarded IP values; Uvicorn proxy-header rewriting is disabled.
+   Never expose port 8000. Both public flows are available automatically; no
+   post-deployment feature switch exists. Complete a custom local review and a
+   sample review, including download and temporary demo decisions.
+10. If validation fails, restore the retained old images/revision and
     old Compose/network configuration. The accounting migration is additive;
     preserve the current volume rather than automatically restoring over newer
     review data. If database restoration is necessary, stop the API and reconcile
@@ -277,11 +389,11 @@ sudo python3 deploy/create_env.py /etc/dubguard/server.env
 sudoedit /etc/dubguard/server.env
 ```
 
-The generator refuses to overwrite existing files and creates distinct reviewer,
-private-demo and AMD-demo secrets. Retrieve/distribute only the relevant code
+The generator refuses to overwrite existing files and creates distinct reviewer
+and AMD-demo secrets. Retrieve/distribute only the relevant credential
 privately. Add an AMD key only if paid inference is intended; never show secrets
-in command flags, URLs, screenshots or logs. Public local mode stays false by
-default. Configure the verified Caddy `/32` before enabling it.
+in command flags, URLs, screenshots or logs. Both public local workflows are
+available immediately. Configure the verified Caddy `/32` before opening access.
 
 ```bash
 dc() { sudo --preserve-env=DUBGUARD_DOMAIN,DUBGUARD_WHISPER_REVISION,DUBGUARD_SERVER_ENV,DUBGUARD_PROXY_SUBNET,DUBGUARD_CADDY_IP,DUBGUARD_API_IP docker compose -p dubguard -f deploy/compose.yaml "$@"; }
@@ -357,7 +469,7 @@ production bundle separately from stubbed development-server E2E.
 
 `deploy/validate_public.py` is localhost-only and writes temporary session
 capabilities to its private `--state` file. It expects a fresh disposable data
-volume, `DUBGUARD_PUBLIC_LOCAL_DEMO=true`, trusted Caddy `172.30.71.2/32`, default
+volume, trusted Caddy `172.30.71.2/32`, default
 four sessions/hour and a blank AMD key. Use a separate temporary Compose override
 for that data volume and settings; do not run it against production or reuse the
 private smoke DB with spent quotas. After readiness:
@@ -385,7 +497,8 @@ $env:DUBGUARD_WHISPER_MODEL = (Resolve-Path .dubguard-data/models/tiny.en).Path
 .venv/Scripts/python -m uvicorn dubguard.api:app --host 127.0.0.1 --port 8000
 ```
 
-Set the separate private demo/reviewer configuration before opening the UI.
+Local public reviews need no access configuration. Set private reviewer credentials
+only for organizational workflows; AMD authorization remains separate and optional.
 PyAV 18.1.0 is deliberately pinned for faster-whisper 1.2.1 compatibility.
 
 ## Limits, restarts and operations

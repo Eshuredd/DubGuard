@@ -81,14 +81,11 @@ async function correct(page: Page, text: string) {
   ).toBeVisible();
 }
 
-test("real MediaRecorder on fake device → private Quick Test → refresh and delete", async ({
+test("real MediaRecorder on fake device → public Quick Test → refresh and delete", async ({
   page,
 }) => {
   await page.goto("/test");
   await capture(page, "landing");
-  await page
-    .getByLabel("Demo access code")
-    .fill(process.env.DUBGUARD_E2E_DEMO_CODE!);
   await page.getByRole("button", { name: "Start Quick Test" }).click();
   await capture(page, "scenarios");
   await expect(
@@ -191,9 +188,6 @@ test("Quick Test AMD consent, mocked citation evidence, invalid citations and qu
 }) => {
   await page.goto("/test");
   await capture(page, "landing");
-  await page
-    .getByLabel("Demo access code")
-    .fill(process.env.DUBGUARD_E2E_DEMO_CODE!);
   await page.getByRole("button", { name: "Start Quick Test" }).click();
   await capture(page, "scenarios");
   await expect(page.getByLabel("Verification mode")).toHaveValue("local");
@@ -517,8 +511,7 @@ test("keyboard navigation reaches the demo and changes scenario without a pointe
     page.getByRole("link", { name: "Skip to content" }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
-  await page.getByLabel("Demo access code").focus();
-  await page.keyboard.type(process.env.DUBGUARD_E2E_DEMO_CODE!);
+  await page.getByRole("button", { name: "Start Quick Test" }).focus();
   await page.keyboard.press("Enter");
   const scenario = page.getByRole("button", {
     name: "15 versus 50",
@@ -569,9 +562,6 @@ test("recoverable connection errors, queue filters and narrow keyboard evidence 
   await expect(page.getByRole("alert")).toContainText("Temporary test outage");
   await page.unroute("**/api/quick/config");
   await page.getByRole("button", { name: "Reload session status" }).click();
-  await page
-    .getByLabel("Demo access code")
-    .fill(process.env.DUBGUARD_E2E_DEMO_CODE!);
   await page.getByRole("button", { name: "Start Quick Test" }).click();
   await page.getByRole("button", { name: "15 versus 50", exact: true }).click();
   await page.getByLabel("Upload audio", { exact: true }).setInputFiles({

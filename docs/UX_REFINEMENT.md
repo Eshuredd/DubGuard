@@ -75,7 +75,7 @@ rtk npm run typecheck
 rtk npm test
 rtk npm run build
 rtk proxy powershell -NoProfile -Command '$env:DUBGUARD_VISUAL_DIR="../reports/local/visual-redesign"; $env:DUBGUARD_E2E_API_PORT="18000"; $env:DUBGUARD_E2E_WEB_PORT="15173"; npm run test:e2e -- --reporter=line'
-rtk proxy powershell -NoProfile -Command '$env:DUBGUARD_E2E_PUBLIC="true"; $env:DUBGUARD_VISUAL_DIR="../reports/local/visual-redesign"; $env:DUBGUARD_E2E_API_PORT="18000"; $env:DUBGUARD_E2E_WEB_PORT="15173"; npm run test:e2e -- tests/public.spec.ts --reporter=line'
+rtk proxy powershell -NoProfile -Command '$env:DUBGUARD_VISUAL_DIR="../reports/local/visual-redesign"; $env:DUBGUARD_E2E_API_PORT="18000"; $env:DUBGUARD_E2E_WEB_PORT="15173"; npm run test:e2e -- tests/public.spec.ts --reporter=line'
 ```
 
 From the repository root: `rtk proxy .venv/Scripts/python.exe -m pytest -q --junitxml=reports/local/visual-redesign/backend.xml`. Alternate ports avoid touching existing local services. These checks validate fixture protocol/UI behavior, not real ASR or AMD inference quality, full WCAG conformance, or production deployment readiness.
@@ -132,7 +132,7 @@ Reproduce on PowerShell (from `frontend`; use a fresh process for each mode):
 
 ```powershell
 rtk proxy powershell -NoProfile -Command '$env:DUBGUARD_E2E_API_PORT="18000"; $env:DUBGUARD_E2E_WEB_PORT="15173"; npm run test:e2e -- --reporter=line'
-rtk proxy powershell -NoProfile -Command '$env:DUBGUARD_E2E_PUBLIC="true"; $env:DUBGUARD_E2E_API_PORT="18000"; $env:DUBGUARD_E2E_WEB_PORT="15173"; npm run test:e2e -- tests/public.spec.ts --reporter=line'
+rtk proxy powershell -NoProfile -Command '$env:DUBGUARD_E2E_API_PORT="18000"; $env:DUBGUARD_E2E_WEB_PORT="15173"; npm run test:e2e -- tests/public.spec.ts --reporter=line'
 ```
 
 The default development ports were already occupied, so tests used separate ports and temporary data directories rather than reusing or stopping existing services. Tests retain the existing backend quota/security behavior. No production audio/history was deleted and no live AMD request was made. Fixture screenshots are not evidence of real ASR/AMD accuracy. Automated accessibility checks do not establish complete WCAG conformance; physical microphone, screen-reader speech output and non-Chromium browsers were not manually validated. Local Node was v22.19.0, below the package's declared engine floor; checks passed, but the pinned production Node 22.22.2 Docker build was not executed here.

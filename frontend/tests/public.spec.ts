@@ -6,13 +6,9 @@ import { capture } from "./capture";
 test("public local mode: no code, original upload download, local evidence and restricted AMD", async ({
   page,
 }) => {
-  test.skip(
-    process.env.DUBGUARD_E2E_PUBLIC !== "true",
-    "Run separately with DUBGUARD_E2E_PUBLIC=true",
-  );
   await page.goto("/test");
   await expect(
-    page.getByRole("heading", { name: "Start a public local test" }),
+    page.getByRole("heading", { name: "Start a sample review" }),
   ).toBeVisible();
   await expect(
     page.getByLabel("Demo access code", { exact: true }),
@@ -34,13 +30,11 @@ test("public local mode: no code, original upload download, local evidence and r
   data.writeUInt16LE(16, 34);
   data.write("data", 36);
   data.writeUInt32LE(32000, 40);
-  await page
-    .getByLabel("Upload audio", { exact: true })
-    .setInputFiles({
-      name: "original-evaluation.wav",
-      mimeType: "audio/wav",
-      buffer: data,
-    });
+  await page.getByLabel("Upload audio", { exact: true }).setInputFiles({
+    name: "original-evaluation.wav",
+    mimeType: "audio/wav",
+    buffer: data,
+  });
   const pending = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download Original Recording" }).click();
   const download = await pending;

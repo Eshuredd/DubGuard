@@ -15,8 +15,6 @@ from test_phase3 import wav_bytes
 @pytest.fixture
 def ws(tmp_path, monkeypatch):
     monkeypatch.setenv('DUBGUARD_DATA_DIR', str(tmp_path))
-    monkeypatch.setenv('DUBGUARD_PUBLIC_WORKSPACE', 'true')
-    monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO', 'true')
     monkeypatch.setenv('DUBGUARD_CLIENT_SESSIONS_PER_HOUR', '30')
     monkeypatch.setenv('DUBGUARD_CLIENT_UPLOADS_PER_HOUR', '90')
     monkeypatch.setenv('DUBGUARD_CLIENT_EDITS_PER_HOUR', '120')
@@ -67,12 +65,17 @@ def correction(revision, text='Wait 50 minutes before restarting.'):
                 {'id': 'visitor-1', 'instruction_id': 'step-1', 'text': text, 'start_seconds': 0, 'end_seconds': .3, 'uncertain': False}]}}
 
 
-def test_disabled_by_default(ws, monkeypatch):
+@pytest.mark.parametrize('legacy', [None, 'false', 'true'])
+def test_always_available_without_activation(ws, monkeypatch, legacy):
     c, s, _ = ws
-    monkeypatch.delenv('DUBGUARD_PUBLIC_WORKSPACE')
-    assert c.get('/workspace/config').json()['enabled'] is False
-    assert c.post('/workspace/sessions').status_code == 503
-    assert save(c, s).status_code == 503
+    if legacy is None:
+        monkeypatch.delenv('DUBGUARD_PUBLIC_WORKSPACE', raising=False)
+    else:
+        monkeypatch.setenv('DUBGUARD_PUBLIC_WORKSPACE', legacy)
+    assert c.get('/workspace/config').json()['enabled'] is True
+    assert c.post('/workspace/sessions').status_code == 200
+    assert save(c, s).status_code == 200
+    assert analyze(c, s).status_code == 200
     assert c.delete('/workspace/session', headers=headers(s)).status_code == 200
 
 

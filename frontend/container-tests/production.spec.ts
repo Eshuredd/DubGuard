@@ -18,7 +18,7 @@ const value = (name: string) =>
 if (value("AMD_TOKEN_FACTORY_API_KEY"))
   throw new Error("Container test requires a blank AMD key");
 
-test("production SPA, CSP, private upload and real CPU ASR remain provisional", async ({
+test("production SPA, CSP, public upload and real CPU ASR remain provisional", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -28,9 +28,6 @@ test("production SPA, CSP, private upload and real CPU ASR remain provisional", 
   });
   const response = await page.goto("/test");
   expect(response?.headers()["permissions-policy"]).toBe("microphone=(self)");
-  await page
-    .getByLabel("Demo access code")
-    .fill(value("DUBGUARD_DEMO_ACCESS_CODE"));
   await page.getByRole("button", { name: "Start Quick Test" }).click();
   await expect(page.getByLabel("Verification mode")).toHaveValue("local");
   const wav = Buffer.alloc(44 + 64000);

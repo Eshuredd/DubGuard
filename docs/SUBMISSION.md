@@ -93,8 +93,8 @@ DeepSeek is an executed AMD contribution here; no ROCm/Quark/MiMo claims.
   preserving the existing project, volumes, credentials and one-API constraint.
 - Complete [physical microphone/independent-label checks](RECORDING_GUIDE.md),
   including failure states, exact original downloads, consent and privacy review.
-- Use distinct private-demo, AMD-demo and reviewer credentials. Public local mode
-  must pass proxy trust, anonymous audio rejection and quota checks before enabling.
+- Use distinct AMD-demo and reviewer credentials. Public local reviews need no
+  activation; pass proxy trust, anonymous audio rejection and quota checks before deployment.
 - Supply the actual video link and dashboard assets; label historical, mocked
   and prerecorded content. Check final description lengths in the current form.
 - Keep personal recordings/exports private unless consented/redacted. Do not claim

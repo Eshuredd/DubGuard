@@ -18,8 +18,6 @@ from test_phase4 import amd, quick
 @pytest.fixture
 def public(tmp_path, monkeypatch):
     monkeypatch.setenv('DUBGUARD_DATA_DIR', str(tmp_path))
-    monkeypatch.delenv('DUBGUARD_PUBLIC_LOCAL_DEMO', raising=False)
-    monkeypatch.setenv('DUBGUARD_DEMO_ACCESS_CODE', 'private-test-code-at-least-24-chars')
     monkeypatch.setenv('DUBGUARD_AMD_DEMO_ACCESS_CODE', '')
     monkeypatch.setenv('AMD_TOKEN_FACTORY_API_KEY', '')
     monkeypatch.setenv('DUBGUARD_TRUSTED_PROXIES', '')
@@ -33,7 +31,6 @@ def public(tmp_path, monkeypatch):
 
 
 def create(c, monkeypatch):
-    monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO', 'true')
     r = c.post('/quick/sessions')
     assert r.status_code == 200
     return r.json()
@@ -47,13 +44,17 @@ def upload(c, s, **params):
     return c.post('/quick/analyze', params={'scenario_id': 'correct', **params}, headers=bearer(s), files={'file': ('silence.wav', wav_bytes(), 'audio/wav')})
 
 
-def test_default_private_gate_and_public_configuration(public, monkeypatch):
+@pytest.mark.parametrize('legacy', [None, 'false', 'true'])
+def test_always_public_without_configuration_or_code(public, monkeypatch, legacy):
     c = public
-    assert c.get('/quick/config').json() == {'public_local': False, 'amd_available': False}
-    assert c.post('/quick/sessions').status_code == 401
-    assert c.post('/quick/sessions', headers={'X-Demo-Code': 'private-test-code-at-least-24-chars'}).status_code == 200
-    monkeypatch.setenv('DUBGUARD_DEMO_ACCESS_CODE', '')
-    assert c.post('/quick/sessions').status_code == 503
+    if legacy is None:
+        monkeypatch.delenv('DUBGUARD_PUBLIC_LOCAL_DEMO', raising=False)
+    else:
+        monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO', legacy)
+    monkeypatch.delenv('DUBGUARD_DEMO_ACCESS_CODE', raising=False)
+    assert c.get('/quick/config').json() == {'public_local': True, 'amd_available': False}
+    assert c.post('/quick/sessions').status_code == 200
+    assert c.post('/quick/sessions', headers={'X-Demo-Code': 'irrelevant-old-header'}).status_code == 200
     assert create(c, monkeypatch)['max_runs'] == 3
 
 
@@ -102,7 +103,6 @@ def test_client_admissions_survive_delete_expiry_and_restart(public, monkeypatch
 
 
 def test_client_cannot_spoof_forwarded_headers(public, monkeypatch):
-    monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO', 'true')
     c = TestClient(app, client=('198.51.100.7', 2345))
     for i in range(4):
         assert c.post('/quick/sessions', headers={'X-Forwarded-For': f'203.0.113.{i}'}).status_code == 200
@@ -126,7 +126,6 @@ def test_proxy_address_parsing(monkeypatch, peer, trust, forwarded, expected):
 
 
 def test_global_sessions_and_admission_history(public, monkeypatch):
-    monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO', 'true')
     sessions = []
     for i in range(20):
         c = TestClient(app, client=(f'192.0.2.{i+1}', 1234))
@@ -171,7 +170,6 @@ def test_runtime_upload_slots_and_global_processing(public, monkeypatch):
 
 def test_anonymous_amd_denied_without_consent_code_or_config(amd, monkeypatch):
     c, s, calls, _ = amd
-    monkeypatch.setenv('DUBGUARD_PUBLIC_LOCAL_DEMO', 'true')
     s = c.post('/quick/sessions').json()
     for code, consent, status in [('', True, 403), ('wrong', True, 403), ('phase6-separate-test-amd-code-long', False, 422)]:
         r = c.post('/quick/analyze?scenario_id=correct&mode=amd&consent='+str(consent).lower(), headers={**bearer(s), 'X-AMD-Demo-Code': code}, files={'file': ('test.wav', wav_bytes(), 'audio/wav')})
@@ -185,7 +183,7 @@ def test_anonymous_amd_denied_without_consent_code_or_config(amd, monkeypatch):
 
 
 @pytest.mark.parametrize('setting,value', [
-    ('DUBGUARD_AMD_DEMO_ACCESS_CODE', 'test-only-demo-access-code-long'),
+    ('DUBGUARD_AMD_DEMO_ACCESS_CODE', 'too-short'),
     ('DUBGUARD_REVIEW_TOKENS_JSON', '{"human":"phase6-separate-test-amd-code-long"}'),
     ('DUBGUARD_REVIEW_TOKENS_JSON', 'not-json'),
     ('AMD_TOKEN_FACTORY_API_KEY', ''),
@@ -256,9 +254,10 @@ def test_new_install_configuration_is_private_distinct_and_never_overwrites(tmp_
     result = subprocess.run([sys.executable, 'deploy/create_env.py', str(path)], capture_output=True, text=True)
     assert result.returncode == 0
     values = dict(line.split('=', 1) for line in path.read_text().splitlines() if '=' in line and not line.startswith('#'))
-    codes = [values['DUBGUARD_DEMO_ACCESS_CODE'], values['DUBGUARD_AMD_DEMO_ACCESS_CODE'], json.loads(values['DUBGUARD_REVIEW_TOKENS_JSON'])['reviewer']]
-    assert len(set(codes)) == 3 and all(len(code) >= 24 and code not in result.stdout+result.stderr for code in codes)
-    assert values['DUBGUARD_PUBLIC_LOCAL_DEMO'] == 'false' and values['AMD_TOKEN_FACTORY_API_KEY'] == ''
+    codes = [values['DUBGUARD_AMD_DEMO_ACCESS_CODE'], json.loads(values['DUBGUARD_REVIEW_TOKENS_JSON'])['reviewer']]
+    assert len(set(codes)) == 2 and all(len(code) >= 24 and code not in result.stdout+result.stderr for code in codes)
+    assert values['AMD_TOKEN_FACTORY_API_KEY'] == ''
+    assert not {'DUBGUARD_PUBLIC_LOCAL_DEMO', 'DUBGUARD_PUBLIC_WORKSPACE', 'DUBGUARD_DEMO_ACCESS_CODE'} & values.keys()
     prior = path.read_bytes()
     assert subprocess.run([sys.executable, 'deploy/create_env.py', str(path)], capture_output=True).returncode != 0
     assert path.read_bytes() == prior
@@ -299,7 +298,7 @@ def test_non_ascii_code_headers_are_rejected_without_server_errors(amd):
     c, s, calls, _ = amd
     # Raw bytes exercise HTTP Latin-1 header decoding without httpx ASCII encoding.
     assert c.post('/quick/analyze?scenario_id=correct&mode=amd&consent=true', headers=[(b'authorization', bearer(s)['Authorization'].encode()), (b'x-amd-demo-code', b'\xff'*25)]).status_code == 403
-    assert c.post('/quick/sessions', headers=[(b'x-demo-code', b'\xff'*25)]).status_code == 401
+    assert c.post('/quick/sessions', headers=[(b'x-demo-code', b'\xff'*25)]).status_code == 200
     assert not calls
 
 
